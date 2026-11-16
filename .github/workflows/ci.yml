@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Fanclan/StreamSnipe-Companion
-          ref: 9e07e8d789a67cbfd650166db9f0f83b7cd2e5f4
+          ref: 613c71f223e196081dfabec118fcaab1167d7e5a
           path: .integration/companion
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
