@@ -1,4 +1,5 @@
 ---
 import Base from '../layouts/Base.astro';
+import { releases } from '../lib/releases';
 ---
-<Base title="Changelog — StreamSnipe"><div class="wrap"><article class="prose"><div class="eyebrow">Release notes / Changelog</div><h1>What’s new.</h1><p class="lead">This is where verified release notes will live.</p><h2>Preparing for beta</h2><p>The local companion and redesigned studio are in development. Release notes and downloads will be published after artifacts are verified.</p></article></div></Base>
+<Base title="Changelog — StreamSnipe"><div class="wrap"><article class="prose"><div class="eyebrow">Release notes / Changelog</div><h1>What’s new.</h1>{releases.length ? releases.map(release=><section><h2>Version {release.version}</h2><p>{release.date}</p><ul>{release.notes.map(note=><li>{note}</li>)}</ul></section>) : <><p class="lead">This is where verified release notes will live.</p><h2>Preparing for beta</h2><p>The local companion and redesigned studio are in development. Release notes and downloads will be published after artifacts are verified.</p></>}</article></div></Base>

@@ -1,39 +1,913 @@
-import React,{useCallback,useEffect,useRef,useState} from 'react';
-import{createRoot}from'react-dom/client';
-import{Activity,Archive,AudioLines,Check,ChevronRight,CircleHelp,Clapperboard,Download,ExternalLink,Grid2X2,HardDrive,LayoutDashboard,List,Monitor,Plus,Radio,RefreshCw,Settings as SettingsIcon,SunMoon,Trash2,X}from'lucide-react';
-import{base,bytes,events,getToken,request,send,setToken}from'./api';
-import './style.css';
-type Any=Record<string,any>;
-const date=(s?:string)=>s?new Date(s).toLocaleString():'—';
-const active=(s:string)=>['queued','starting','recording','stopping','finalizing'].includes(s);
-function App(){
- const [theme,themeSet]=useState(localStorage.getItem('ss-theme')||'dark'),[token,tokenState]=useState(getToken()),[info,infoSet]=useState<Any|null>(null),[connect,connectSet]=useState('Checking companion…'),[pair,pairSet]=useState<Any|null>(null),[error,errorSet]=useState(''),[page,pageSet]=useState('Overview'),[channels,channelsSet]=useState<Any[]>([]),[recordings,recordingsSet]=useState<Any[]>([]),[status,statusSet]=useState<Any|null>(null),[settings,settingsSet]=useState<Any|null>(null),[sessions,sessionsSet]=useState<Any[]>([]),[diag,diagSet]=useState<Any|null>(null),[selected,selectedSet]=useState<Any|null>(null),[modal,modalSet]=useState(''),[search,searchSet]=useState(''),[filter,filterSet]=useState('all'),[view,viewSet]=useState('grid'),[platform,platformSet]=useState('all'),[dateFrom,dateFromSet]=useState(''),[dateTo,dateToSet]=useState(''),[sort,sortSet]=useState('newest'),[setupToken,setupTokenSet]=useState('');
- useEffect(()=>{document.documentElement.dataset.theme=theme;localStorage.setItem('ss-theme',theme)},[theme]);
- const probe=useCallback(async()=>{try{const i=await request('/info',{},'');infoSet(i);connectSet(i.protocolVersion===1?'Connected':'Version mismatch');}catch{infoSet(null);connectSet('Companion offline or local network access blocked')}},[]);
- const refresh=useCallback(async()=>{if(!token)return;try{const [c,r,s]=await Promise.all([request('/channels'),request('/recordings'),request('/status')]);channelsSet(c);recordingsSet(r);statusSet(s);errorSet('')}catch(e:any){errorSet(e.message)}},[token]);
- useEffect(()=>{probe();const t=setInterval(probe,15000);return()=>clearInterval(t)},[probe]);
- useEffect(()=>{if(!token)return;refresh();const t=setInterval(refresh,15000);let close=()=>{};try{close=events(refresh)}catch{errorSet('Live updates unavailable; refreshing periodically.')}return()=>{clearInterval(t);close()}},[token,refresh]);
- useEffect(()=>{if(page==='Settings'&&token){Promise.all([request('/settings'),request('/sessions')]).then(([s,ss])=>{settingsSet(s);sessionsSet(ss)}).catch(e=>errorSet(e.message))}},[page,token]);
- useEffect(()=>{if(!pair)return;let stop=false;const timer=setInterval(async()=>{try{const p=await request('/pairings/'+pair.id,{headers:{'X-Pairing-Token':pair.pollToken}},'');if(p.status==='approved'&&p.token){setToken(p.token);tokenState(p.token);pairSet(null)}else if(p.status==='expired'){pairSet(null);errorSet('Pairing expired. Please try again.')}}catch(e:any){if(!stop)errorSet(e.message)}},1800);return()=>{stop=true;clearInterval(timer)}},[pair]);
- async function action(fn:()=>Promise<any>){try{errorSet('');await fn();await refresh()}catch(e:any){errorSet(e.message)}}
- const beginPair=()=>action(async()=>pairSet(await send('/pairings',{name:navigator.userAgent.includes('Chrome')?'Chrome browser':'Browser'})));
- const filtered=recordings.filter(r=>(filter==='all'||r.status===filter)&&(platform==='all'||r.platform===platform)&&(!dateFrom||r.startedAt?.slice(0,10)>=dateFrom)&&(!dateTo||r.startedAt?.slice(0,10)<=dateTo)&&`${r.title} ${r.platform} ${r.url}`.toLowerCase().includes(search.toLowerCase())).sort((a,b)=>sort==='oldest'?Date.parse(a.startedAt)-Date.parse(b.startedAt):Date.parse(b.startedAt)-Date.parse(a.startedAt));
- return <div className="app"><aside className="sidebar"><a className="brand" href="/"><span className="logo"><AudioLines size={20}/></span><span>StreamSnipe<small>RECORDING STUDIO</small></span></a><div className="side-label">WORKSPACE</div><nav>{[[LayoutDashboard,'Overview'],[Radio,'Channels'],[Archive,'Library'],[SettingsIcon,'Settings']].map(([Icon,label]:any)=><button key={label} onClick={()=>{pageSet(label);selectedSet(null)}} className={page===label?'selected':''}><Icon size={18}/>{label}<ChevronRight size={14} className="arrow"/></button>)}</nav><div className="sidebottom"><div className="side-label">YOUR COMPANION</div><div className="connection"><span className={'dot '+(info&&info.protocolVersion===1?'online':'')}/><div><b>{info?'Companion detected':'Not connected'}</b><small>{info?`v${info.version} · ${info.mode}`:'Waiting on this device'}</small></div></div><a href="/docs/"><CircleHelp size={16}/> Help & documentation ↗</a></div></aside><main className="main"><header className="top"><div><span className="crumb">STUDIO / </span><span>{page.toUpperCase()}</span></div><div className="topright"><span className="topstatus"><span className={'dot '+(info&&info.protocolVersion===1?'online':'')}/>{connect}</span><button className="iconbtn" aria-label="Toggle theme" onClick={()=>themeSet(theme==='dark'?'light':'dark')}><SunMoon size={18}/></button></div></header><div className="content">{error&&<div className="alert" role="alert">{error}<button onClick={()=>errorSet('')} aria-label="Dismiss"><X size={16}/></button></div>}{!token?<div className="pair-page"><div className="eyebrow">YOUR SPACE, YOUR DEVICE</div><h1>Let’s connect<br/>your studio.</h1><p>Pair this browser with your local StreamSnipe companion to access your channels and recordings.</p><div className="pair-card"><div className="pair-icon"><Monitor size={24}/></div><div><h3>{connect}</h3><p>{info?'Your companion is ready to pair. Approve the request in its local interface.':'Start the companion and allow your browser to access local network devices, then try again.'}</p>{info&&info.protocolVersion!==1&&<p>This studio requires protocol version 1. Update your companion.</p>}{pair?<div className="pair-code"><small>CONFIRM THIS CODE IN THE COMPANION</small><strong>{pair.code}</strong><span>Waiting for approval · expires {date(pair.expiresAt)}</span></div>:<button className="primary" disabled={!info||info.protocolVersion!==1} onClick={beginPair}>Pair this browser <ChevronRight size={16}/></button>}{pair&&info?.mode==='docker'&&base===location.origin&&<form onSubmit={e=>{e.preventDefault();action(async()=>{await request(`/pairings/${pair.id}/approve`,{method:'POST',headers:{'X-Setup-Token':setupToken}},'');setupTokenSet('')})}}><label>Docker setup token<input type="password" required value={setupToken} onChange={e=>setupTokenSet(e.target.value)}/></label><button className="secondary">Approve pairing</button></form>}<button className="secondary" onClick={probe}><RefreshCw size={15}/> Check again</button></div></div><a className="help" href="/docs/">Need a hand? Read the setup guide ↗</a></div>:<>
- {page==='Overview'&&<><PageTitle eyebrow="YOUR STUDIO AT A GLANCE" title="Good to see you." desc="Everything happening in your recording studio." action={<button className="primary" onClick={()=>modalSet('record')}><Plus size={16}/> New recording</button>}/><div className="stats"><Stat icon={<Activity/>} label="ACTIVE RECORDINGS" value={status?.activeRecordings??'—'} note="Currently capturing"/><Stat icon={<Archive/>} label="TOTAL RECORDINGS" value={status?.totalRecordings??'—'} note="In your library"/><Stat icon={<Radio/>} label="CHANNELS" value={status?.totalChannels??'—'} note="Saved to your studio"/><Stat icon={<HardDrive/>} label="DISK AVAILABLE" value={status?.disk?bytes(status.disk.available):'—'} note={status?.disk?`${status.disk.usedPercent.toFixed(0)}% used`:'On this device'}/></div><div className="sectionhead"><div><div className="eyebrow">RECENT ACTIVITY</div><h2>Your recordings</h2></div><button className="link" onClick={()=>pageSet('Library')}>View library →</button></div>{recordings.length?<div className="record-list">{recordings.slice(0,5).map(r=><RecordRow key={r.id} r={r} open={()=>{selectedSet(r);modalSet('player')}} stop={()=>action(()=>send(`/recordings/${r.id}/stop`,{}))}/>)}</div>:<Empty icon={<Clapperboard/>} title="Your first recording starts here" text="Start a recording from a stream URL, or add a channel to capture it automatically." button={<button className="secondary" onClick={()=>modalSet('record')}>Start a recording →</button>}/>}</>}
- {page==='Channels'&&<><PageTitle eyebrow="MONITOR YOUR FAVORITES" title={selected?'Channel details':'Your channels'} desc={selected?'Review and manage this channel.':'Keep the streams you care about close.'} action={<button className="primary" onClick={()=>{selectedSet(null);modalSet('channel')}}><Plus size={16}/> Add channel</button>}/>{selected?<ChannelDetail channel={channels.find(c=>c.id===selected.id)||selected} back={()=>selectedSet(null)} edit={()=>modalSet('channel')} action={action}/>:channels.length?<div className="channel-grid">{channels.map(c=><button className="channel" key={c.id} onClick={()=>selectedSet(c)}><div className="channel-avatar">{c.name?.slice(0,1).toUpperCase()}</div><div><b>{c.name}</b><small>{c.platform||'Channel'} · {c.autoRecord?'Auto-record on':'Manual recording'}</small></div><span className={'pill '+(c.isLive?'live':'')}>{c.isLive?'LIVE':'OFFLINE'}</span><ChevronRight size={16}/></button>)}</div>:<Empty icon={<Radio/>} title="No channels yet" text="Add a channel to check when it goes live and optionally record automatically." button={<button className="secondary" onClick={()=>modalSet('channel')}>Add your first channel →</button>}/>}</>}
- {page==='Library'&&<><PageTitle eyebrow="YOUR MOMENTS, KEPT" title="The library." desc="Find and revisit everything you’ve recorded." action={<button className="primary" onClick={()=>modalSet('record')}><Plus size={16}/> New recording</button>}/><div className="toolbar"><input aria-label="Search recordings" placeholder="Search recordings..." value={search} onChange={e=>searchSet(e.target.value)}/><select aria-label="Filter by status" value={filter} onChange={e=>filterSet(e.target.value)}><option value="all">All statuses</option>{['recording','completed','interrupted','failed'].map(s=><option key={s}>{s}</option>)}</select><select aria-label="Filter by platform" value={platform} onChange={e=>platformSet(e.target.value)}><option value="all">All platforms</option>{[...new Set(recordings.map(r=>r.platform).filter(Boolean))].map(p=><option key={p}>{p}</option>)}</select><input aria-label="From date" type="date" value={dateFrom} onChange={e=>dateFromSet(e.target.value)}/><input aria-label="To date" type="date" value={dateTo} onChange={e=>dateToSet(e.target.value)}/><select aria-label="Sort recordings" value={sort} onChange={e=>sortSet(e.target.value)}><option value="newest">Newest first</option><option value="oldest">Oldest first</option></select><div className="viewtoggle"><button aria-label="Grid view" onClick={()=>viewSet('grid')} className={view==='grid'?'on':''}><Grid2X2 size={17}/></button><button aria-label="List view" onClick={()=>viewSet('list')} className={view==='list'?'on':''}><List size={17}/></button></div></div>{filtered.length?<div className={view==='grid'?'record-grid':'record-list'}>{filtered.map(r=>view==='grid'?<button className="record-card" key={r.id} onClick={()=>{selectedSet(r);modalSet('player')}}><Thumbnail r={r}/><div className="record-body"><span className={'pill '+(r.status==='recording'?'live':'')}>{r.status}</span><h3>{r.title||'Untitled recording'}</h3><small>{r.platform} · {date(r.startedAt)}</small></div></button>:<RecordRow key={r.id} r={r} open={()=>{selectedSet(r);modalSet('player')}} stop={()=>action(()=>send(`/recordings/${r.id}/stop`,{}))}/>)}</div>:<Empty icon={<Archive/>} title={recordings.length?'No recordings match':'Your library is waiting'} text={recordings.length?'Try a different search or status.':'Completed recordings will appear here, ready to revisit.'}/>}</>}
- {page==='Settings'&&<><PageTitle eyebrow="MAKE IT YOURS" title="Studio settings." desc="Recording preferences, storage and connected browsers."/>{settings?<SettingsPanel settings={settings} set={settingsSet} sessions={sessions} reload={()=>request('/sessions').then(sessionsSet)} action={action} diag={diag} setDiag={diagSet} disconnect={()=>{setToken('');tokenState('')}}/>:<p>Loading settings…</p>}</>}
- </>}</div></main>{modal==='record'&&<Modal title="New recording" close={()=>modalSet('')}><RecordForm submit={(data:Any)=>action(async()=>{await send('/recordings/start',data);modalSet('')})}/></Modal>}{modal==='channel'&&<Modal title={selected?'Edit channel':'Add a channel'} close={()=>modalSet('')}><ChannelForm initial={selected} submit={(data:Any)=>action(async()=>{const c=selected?await send('/channels/'+selected.id,data,'PATCH'):await send('/channels',data);if(selected)selectedSet(c);modalSet('')})}/></Modal>}{modal==='player'&&selected&&<Modal title={selected.title||'Recording'} close={()=>modalSet('')}><Player recording={selected} action={action} close={()=>modalSet('')}/></Modal>}</div>
+import type {
+  Channel,
+  Recording,
+  Settings,
+  SystemStatus,
+  PairingChallenge,
+  Session,
+} from "@fanclan/streamsnipe-protocol";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { createRoot } from "react-dom/client";
+import {
+  Activity,
+  Archive,
+  AudioLines,
+  ChevronRight,
+  CircleHelp,
+  Clapperboard,
+  X,
+  Grid2X2,
+  HardDrive,
+  LayoutDashboard,
+  List,
+  Monitor,
+  Plus,
+  Radio,
+  RefreshCw,
+  Settings as SettingsIcon,
+  SunMoon,
+} from "lucide-react";
+import {
+  ApiError,
+  base,
+  bundled,
+  bytes,
+  client,
+  docsUrl,
+  events,
+  getToken,
+  request,
+  send,
+  setToken,
+} from "./api";
+import { Player } from "./Player";
+import {
+  PageTitle,
+  Stat,
+  Empty,
+  RecordRow,
+  Modal,
+  RecordForm,
+  ChannelForm,
+  ChannelDetail,
+  Thumbnail,
+  SettingsPanel,
+} from "./components";
+import "./style.css";
+type Any = Record<string, any>;
+const date = (s?: string) => (s ? new Date(s).toLocaleString() : "—");
+function App() {
+  const [theme, themeSet] = useState(
+      localStorage.getItem("ss-theme") || "dark",
+    ),
+    [token, tokenState] = useState(getToken()),
+    [info, infoSet] = useState<Any | null>(null),
+    [connect, connectSet] = useState("Checking companion…"),
+    [pair, pairSet] = useState<PairingChallenge | null>(null),
+    [error, errorSet] = useState(""),
+    [page, pageSet] = useState("Overview"),
+    [channels, channelsSet] = useState<Channel[]>([]),
+    [recordings, recordingsSet] = useState<Recording[]>([]),
+    [status, statusSet] = useState<SystemStatus | null>(null),
+    [settings, settingsSet] = useState<Settings | null>(null),
+    [sessions, sessionsSet] = useState<Session[]>([]),
+    [diag, diagSet] = useState<Any | null>(null),
+    [selected, selectedSet] = useState<Any | null>(null),
+    [playerId, playerIdSet] = useState<string | null>(null),
+    [modal, modalSet] = useState(""),
+    [search, searchSet] = useState(""),
+    [filter, filterSet] = useState("all"),
+    [view, viewSet] = useState("grid"),
+    [platform, platformSet] = useState("all"),
+    [channelFilter, channelFilterSet] = useState("all"),
+    [dateFrom, dateFromSet] = useState(""),
+    [dateTo, dateToSet] = useState(""),
+    [sort, sortSet] = useState("newest"),
+    [setupToken, setupTokenSet] = useState("");
+  const pendingRefresh = useRef<Promise<void> | null>(null);
+  const refreshAgain = useRef(false);
+  const epoch = useRef(0);
+  const clearSession = useCallback(() => {
+    epoch.current++;
+    setToken("");
+    tokenState("");
+    channelsSet([]);
+    recordingsSet([]);
+    statusSet(null);
+    settingsSet(null);
+    sessionsSet([]);
+    diagSet(null);
+    selectedSet(null);
+    playerIdSet(null);
+    pendingRefresh.current = null;
+    refreshAgain.current = false;
+    modalSet("");
+    pairSet(null);
+    pageSet("Overview");
+  }, []);
+  useEffect(() => {
+    const handler = () => {
+      clearSession();
+      errorSet(
+        "Your browser session expired or was revoked. Please pair again.",
+      );
+    };
+    window.addEventListener("streamsnipe:unauthorized", handler);
+    return () =>
+      window.removeEventListener("streamsnipe:unauthorized", handler);
+  }, [clearSession]);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    localStorage.setItem("ss-theme", theme);
+  }, [theme]);
+  const probe = useCallback(async () => {
+    try {
+      const i = await client.info();
+      infoSet(i);
+      connectSet(i.protocolVersion === 1 ? "Connected" : "Version mismatch");
+    } catch {
+      infoSet(null);
+      connectSet("Companion offline or local network access blocked");
+    }
+  }, []);
+  const refresh = useCallback((): Promise<void> => {
+    if (!token || !getToken()) return Promise.resolve();
+    if (pendingRefresh.current) {
+      refreshAgain.current = true;
+      return pendingRefresh.current;
+    }
+    const currentEpoch = epoch.current;
+    const pending = (async () => {
+      do {
+        refreshAgain.current = false;
+        try {
+          const [c, r, s] = await Promise.all([
+            client.channels(),
+            client.recordings(),
+            client.status(),
+          ]);
+          if (epoch.current !== currentEpoch) return;
+          channelsSet(c);
+          recordingsSet(r);
+          statusSet(s);
+        } catch (e: any) {
+          if (
+            epoch.current === currentEpoch &&
+            !(e instanceof ApiError && e.status === 401)
+          )
+            errorSet(e.message);
+        }
+      } while (
+        refreshAgain.current &&
+        epoch.current === currentEpoch &&
+        !!getToken()
+      );
+    })();
+    pendingRefresh.current = pending;
+    void pending.finally(() => {
+      if (pendingRefresh.current === pending) pendingRefresh.current = null;
+    });
+    return pending;
+  }, [token]);
+  useEffect(() => {
+    probe();
+    const t = setInterval(probe, 15000);
+    return () => clearInterval(t);
+  }, [probe]);
+  useEffect(() => {
+    if (!token) return;
+    refresh();
+    const t = setInterval(refresh, 15000);
+    let close = () => {};
+    try {
+      close = events(refresh);
+    } catch {
+      errorSet("Live updates unavailable; refreshing periodically.");
+    }
+    return () => {
+      clearInterval(t);
+      close();
+    };
+  }, [token, refresh]);
+  useEffect(() => {
+    if (page === "Settings" && token) {
+      Promise.all([client.settings(), client.sessions()])
+        .then(([s, ss]) => {
+          settingsSet(s);
+          sessionsSet(ss);
+        })
+        .catch((e) => errorSet(e.message));
+    }
+  }, [page, token]);
+  useEffect(() => {
+    if (!pair) return;
+    let stop = false;
+    const timer = setInterval(async () => {
+      try {
+        if (Date.now() >= Date.parse(pair.expiresAt)) {
+          pairSet(null);
+          errorSet("Pairing expired. Please try again.");
+          return;
+        }
+        const p = await request(
+          "/pairings/" + pair.id,
+          { headers: { "X-Pairing-Token": pair.pollToken } },
+          "",
+        );
+        if (p.status === "approved" && p.token) {
+          setToken(p.token);
+          tokenState(p.token);
+          pairSet(null);
+        } else if (p.status === "expired") {
+          pairSet(null);
+          errorSet("Pairing expired. Please try again.");
+        }
+      } catch (e: any) {
+        if (!stop) {
+          if (e instanceof ApiError && (e.status === 403 || e.status === 404)) {
+            pairSet(null);
+            errorSet(
+              "The pairing request is no longer available. Please pair again.",
+            );
+          } else errorSet(e.message);
+        }
+      }
+    }, 1800);
+    return () => {
+      stop = true;
+      clearInterval(timer);
+    };
+  }, [pair]);
+  async function action(fn: () => Promise<any>) {
+    try {
+      errorSet("");
+      await fn();
+      if (getToken()) await refresh();
+    } catch (e: any) {
+      errorSet(e.message);
+    }
+  }
+  const beginPair = () =>
+    action(async () =>
+      pairSet(
+        await send("/pairings", {
+          name: navigator.userAgent.includes("Chrome")
+            ? "Chrome browser"
+            : "Browser",
+        }),
+      ),
+    );
+  const filtered = recordings
+    .filter(
+      (r) =>
+        (filter === "all" || r.status === filter) &&
+        (platform === "all" || r.platform === platform) &&
+        (channelFilter === "all" || r.channelId === channelFilter) &&
+        (!dateFrom || r.startedAt?.slice(0, 10) >= dateFrom) &&
+        (!dateTo || r.startedAt?.slice(0, 10) <= dateTo) &&
+        `${r.title} ${r.platform} ${r.url}`
+          .toLowerCase()
+          .includes(search.toLowerCase()),
+    )
+    .sort((a, b) =>
+      sort === "size"
+        ? b.fileSize - a.fileSize
+        : sort === "oldest"
+          ? Date.parse(a.startedAt) - Date.parse(b.startedAt)
+          : Date.parse(b.startedAt) - Date.parse(a.startedAt),
+    );
+  return (
+    <div className="app">
+      <aside className="sidebar">
+        <a className="brand" href={bundled ? "/app/" : "/"}>
+          <span className="logo">
+            <AudioLines size={20} />
+          </span>
+          <span>
+            StreamSnipe<small>RECORDING STUDIO</small>
+          </span>
+        </a>
+        <div className="side-label">WORKSPACE</div>
+        <nav>
+          {[
+            [LayoutDashboard, "Overview"],
+            [Radio, "Channels"],
+            [Archive, "Library"],
+            [SettingsIcon, "Settings"],
+          ].map(([Icon, label]: any) => (
+            <button
+              key={label}
+              onClick={() => {
+                pageSet(label);
+                selectedSet(null);
+              }}
+              className={page === label ? "selected" : ""}
+            >
+              <Icon size={18} />
+              {label}
+              <ChevronRight size={14} className="arrow" />
+            </button>
+          ))}
+        </nav>
+        <div className="sidebottom">
+          <div className="side-label">YOUR COMPANION</div>
+          <div className="connection">
+            <span
+              className={
+                "dot " + (info && info.protocolVersion === 1 ? "online" : "")
+              }
+            />
+            <div>
+              <b>{info ? "Companion detected" : "Not connected"}</b>
+              <small>
+                {info
+                  ? `v${info.version} · ${info.mode}`
+                  : "Waiting on this device"}
+              </small>
+            </div>
+          </div>
+          <a
+            href={docsUrl}
+            target={bundled ? "_blank" : undefined}
+            rel={bundled ? "noopener noreferrer" : undefined}
+          >
+            <CircleHelp size={16} /> Help & documentation ↗
+          </a>
+        </div>
+      </aside>
+      <main className="main">
+        <header className="top">
+          <div>
+            <span className="crumb">STUDIO / </span>
+            <span>{page.toUpperCase()}</span>
+          </div>
+          <div className="topright">
+            <span className="topstatus">
+              <span
+                className={
+                  "dot " + (info && info.protocolVersion === 1 ? "online" : "")
+                }
+              />
+              {connect}
+            </span>
+            <button
+              className="iconbtn"
+              aria-label="Toggle theme"
+              onClick={() => themeSet(theme === "dark" ? "light" : "dark")}
+            >
+              <SunMoon size={18} />
+            </button>
+          </div>
+        </header>
+        <div className="content">
+          {error && (
+            <div className="alert" role="alert">
+              {error}
+              <button onClick={() => errorSet("")} aria-label="Dismiss">
+                <X size={16} />
+              </button>
+            </div>
+          )}
+          {!token ? (
+            <div className="pair-page">
+              <div className="eyebrow">YOUR SPACE, YOUR DEVICE</div>
+              <h1>
+                Let’s connect
+                <br />
+                your studio.
+              </h1>
+              <p>
+                Pair this browser with your local StreamSnipe companion to
+                access your channels and recordings.
+              </p>
+              <div className="pair-card">
+                <div className="pair-icon">
+                  <Monitor size={24} />
+                </div>
+                <div>
+                  <h3>{connect}</h3>
+                  <p>
+                    {info
+                      ? "Your companion is ready to pair. Approve the request in its local interface."
+                      : "Start the companion and allow your browser to access local network devices, then try again."}
+                  </p>
+                  {info && info.protocolVersion !== 1 && (
+                    <p>
+                      This studio requires protocol version 1. Update your
+                      companion.
+                    </p>
+                  )}
+                  {pair ? (
+                    <div className="pair-code">
+                      <small>CONFIRM THIS CODE IN THE COMPANION</small>
+                      <strong>{pair.code}</strong>
+                      <span>
+                        Waiting for approval · expires {date(pair.expiresAt)}
+                      </span>
+                    </div>
+                  ) : (
+                    <button
+                      className="primary"
+                      disabled={!info || info.protocolVersion !== 1}
+                      onClick={beginPair}
+                    >
+                      Pair this browser <ChevronRight size={16} />
+                    </button>
+                  )}
+                  {pair &&
+                    info?.mode === "docker" &&
+                    base === location.origin && (
+                      <form
+                        onSubmit={(e) => {
+                          e.preventDefault();
+                          action(async () => {
+                            await request(
+                              `/pairings/${pair.id}/approve`,
+                              {
+                                method: "POST",
+                                headers: { "X-Setup-Token": setupToken },
+                              },
+                              "",
+                            );
+                            setupTokenSet("");
+                          });
+                        }}
+                      >
+                        <label>
+                          Docker setup token
+                          <input
+                            type="password"
+                            required
+                            value={setupToken}
+                            onChange={(e) => setupTokenSet(e.target.value)}
+                          />
+                        </label>
+                        <button className="secondary">Approve pairing</button>
+                      </form>
+                    )}
+                  <button className="secondary" onClick={probe}>
+                    <RefreshCw size={15} /> Check again
+                  </button>
+                </div>
+              </div>
+              <a className="help" href="/docs/">
+                Need a hand? Read the setup guide ↗
+              </a>
+            </div>
+          ) : (
+            <>
+              {page === "Overview" && (
+                <>
+                  <PageTitle
+                    eyebrow="YOUR STUDIO AT A GLANCE"
+                    title="Good to see you."
+                    desc="Everything happening in your recording studio."
+                    action={
+                      <button
+                        className="primary"
+                        onClick={() => modalSet("record")}
+                      >
+                        <Plus size={16} /> New recording
+                      </button>
+                    }
+                  />
+                  <div className="stats">
+                    <Stat
+                      icon={<Activity />}
+                      label="ACTIVE RECORDINGS"
+                      value={status?.activeRecordings ?? "—"}
+                      note="Currently capturing"
+                    />
+                    <Stat
+                      icon={<Archive />}
+                      label="TOTAL RECORDINGS"
+                      value={status?.totalRecordings ?? "—"}
+                      note="In your library"
+                    />
+                    <Stat
+                      icon={<Radio />}
+                      label="CHANNELS"
+                      value={status?.totalChannels ?? "—"}
+                      note="Saved to your studio"
+                    />
+                    <Stat
+                      icon={<HardDrive />}
+                      label="DISK AVAILABLE"
+                      value={status?.disk ? bytes(status.disk.available) : "—"}
+                      note={
+                        status?.disk
+                          ? `${status.disk.usedPercent.toFixed(0)}% used`
+                          : "On this device"
+                      }
+                    />
+                  </div>
+                  <div className="sectionhead">
+                    <div>
+                      <div className="eyebrow">RECENT ACTIVITY</div>
+                      <h2>Your recordings</h2>
+                    </div>
+                    <button className="link" onClick={() => pageSet("Library")}>
+                      View library →
+                    </button>
+                  </div>
+                  {recordings.length ? (
+                    <div className="record-list">
+                      {recordings.slice(0, 5).map((r) => (
+                        <RecordRow
+                          key={r.id}
+                          r={r}
+                          open={() => {
+                            playerIdSet(r.id);
+                            modalSet("player");
+                          }}
+                          stop={() =>
+                            action(() => send(`/recordings/${r.id}/stop`, {}))
+                          }
+                        />
+                      ))}
+                    </div>
+                  ) : (
+                    <Empty
+                      icon={<Clapperboard />}
+                      title="Your first recording starts here"
+                      text="Start a recording from a stream URL, or add a channel to capture it automatically."
+                      button={
+                        <button
+                          className="secondary"
+                          onClick={() => modalSet("record")}
+                        >
+                          Start a recording →
+                        </button>
+                      }
+                    />
+                  )}
+                </>
+              )}
+              {page === "Channels" && (
+                <>
+                  <PageTitle
+                    eyebrow="MONITOR YOUR FAVORITES"
+                    title={selected ? "Channel details" : "Your channels"}
+                    desc={
+                      selected
+                        ? "Review and manage this channel."
+                        : "Keep the streams you care about close."
+                    }
+                    action={
+                      <button
+                        className="primary"
+                        onClick={() => {
+                          selectedSet(null);
+                          modalSet("channel");
+                        }}
+                      >
+                        <Plus size={16} /> Add channel
+                      </button>
+                    }
+                  />
+                  {selected ? (
+                    <ChannelDetail
+                      channel={
+                        channels.find((c) => c.id === selected.id) || selected
+                      }
+                      back={() => selectedSet(null)}
+                      edit={() => modalSet("channel")}
+                      action={action}
+                      recordings={recordings.filter(
+                        (r) => r.channelId === selected.id,
+                      )}
+                      openRecording={(r: Any) => {
+                        playerIdSet(r.id);
+                        modalSet("player");
+                      }}
+                      startRecording={() =>
+                        action(() =>
+                          send("/recordings/start", {
+                            url: selected.url,
+                            channelId: selected.id,
+                          }),
+                        )
+                      }
+                    />
+                  ) : channels.length ? (
+                    <div className="channel-grid">
+                      {channels.map((c) => (
+                        <button
+                          className="channel"
+                          key={c.id}
+                          onClick={() => selectedSet(c)}
+                        >
+                          <div className="channel-avatar">
+                            {c.name?.slice(0, 1).toUpperCase()}
+                          </div>
+                          <div>
+                            <b>{c.name}</b>
+                            <small>
+                              {c.platform || "Channel"} ·{" "}
+                              {c.autoRecord
+                                ? "Auto-record on"
+                                : "Manual recording"}
+                            </small>
+                          </div>
+                          <span className={"pill " + (c.isLive ? "live" : "")}>
+                            {c.isLive ? "LIVE" : "OFFLINE"}
+                          </span>
+                          <ChevronRight size={16} />
+                        </button>
+                      ))}
+                    </div>
+                  ) : (
+                    <Empty
+                      icon={<Radio />}
+                      title="No channels yet"
+                      text="Add a channel to check when it goes live and optionally record automatically."
+                      button={
+                        <button
+                          className="secondary"
+                          onClick={() => modalSet("channel")}
+                        >
+                          Add your first channel →
+                        </button>
+                      }
+                    />
+                  )}
+                </>
+              )}
+              {page === "Library" && (
+                <>
+                  <PageTitle
+                    eyebrow="YOUR MOMENTS, KEPT"
+                    title="The library."
+                    desc="Find and revisit everything you’ve recorded."
+                    action={
+                      <button
+                        className="primary"
+                        onClick={() => modalSet("record")}
+                      >
+                        <Plus size={16} /> New recording
+                      </button>
+                    }
+                  />
+                  <div className="toolbar">
+                    <input
+                      aria-label="Search recordings"
+                      placeholder="Search recordings..."
+                      value={search}
+                      onChange={(e) => searchSet(e.target.value)}
+                    />
+                    <select
+                      aria-label="Filter by status"
+                      value={filter}
+                      onChange={(e) => filterSet(e.target.value)}
+                    >
+                      <option value="all">All statuses</option>
+                      {[
+                        "queued",
+                        "starting",
+                        "recording",
+                        "stopping",
+                        "finalizing",
+                        "completed",
+                        "interrupted",
+                        "failed",
+                      ].map((s) => (
+                        <option key={s}>{s}</option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label="Filter by platform"
+                      value={platform}
+                      onChange={(e) => platformSet(e.target.value)}
+                    >
+                      <option value="all">All platforms</option>
+                      {[
+                        ...new Set(
+                          recordings.map((r) => r.platform).filter(Boolean),
+                        ),
+                      ].map((p) => (
+                        <option key={p}>{p}</option>
+                      ))}
+                    </select>
+                    <select
+                      aria-label="Filter by channel"
+                      value={channelFilter}
+                      onChange={(e) => channelFilterSet(e.target.value)}
+                    >
+                      <option value="all">All channels</option>
+                      {channels.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.name}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      aria-label="From date"
+                      type="date"
+                      value={dateFrom}
+                      onChange={(e) => dateFromSet(e.target.value)}
+                    />
+                    <input
+                      aria-label="To date"
+                      type="date"
+                      value={dateTo}
+                      onChange={(e) => dateToSet(e.target.value)}
+                    />
+                    <select
+                      aria-label="Sort recordings"
+                      value={sort}
+                      onChange={(e) => sortSet(e.target.value)}
+                    >
+                      <option value="newest">Newest first</option>
+                      <option value="oldest">Oldest first</option>
+                      <option value="size">Largest first</option>
+                    </select>
+                    <button
+                      className="secondary"
+                      onClick={() => {
+                        searchSet("");
+                        filterSet("all");
+                        platformSet("all");
+                        channelFilterSet("all");
+                        dateFromSet("");
+                        dateToSet("");
+                        sortSet("newest");
+                      }}
+                    >
+                      Reset filters
+                    </button>
+                    <div className="viewtoggle">
+                      <button
+                        aria-label="Grid view"
+                        onClick={() => viewSet("grid")}
+                        className={view === "grid" ? "on" : ""}
+                      >
+                        <Grid2X2 size={17} />
+                      </button>
+                      <button
+                        aria-label="List view"
+                        onClick={() => viewSet("list")}
+                        className={view === "list" ? "on" : ""}
+                      >
+                        <List size={17} />
+                      </button>
+                    </div>
+                  </div>
+                  {filtered.length ? (
+                    <div
+                      className={
+                        view === "grid" ? "record-grid" : "record-list"
+                      }
+                    >
+                      {filtered.map((r) =>
+                        view === "grid" ? (
+                          <button
+                            className="record-card"
+                            key={r.id}
+                            onClick={() => {
+                              playerIdSet(r.id);
+                              modalSet("player");
+                            }}
+                          >
+                            <Thumbnail r={r} />
+                            <div className="record-body">
+                              <span
+                                className={
+                                  "pill " +
+                                  (r.status === "recording" ? "live" : "")
+                                }
+                              >
+                                {r.status}
+                              </span>
+                              <h3>{r.title || "Untitled recording"}</h3>
+                              <small>
+                                {r.platform} · {date(r.startedAt)}
+                              </small>
+                            </div>
+                          </button>
+                        ) : (
+                          <RecordRow
+                            key={r.id}
+                            r={r}
+                            open={() => {
+                              playerIdSet(r.id);
+                              modalSet("player");
+                            }}
+                            stop={() =>
+                              action(() => send(`/recordings/${r.id}/stop`, {}))
+                            }
+                          />
+                        ),
+                      )}
+                    </div>
+                  ) : (
+                    <Empty
+                      icon={<Archive />}
+                      title={
+                        recordings.length
+                          ? "No recordings match"
+                          : "Your library is waiting"
+                      }
+                      text={
+                        recordings.length
+                          ? "Try a different search or status."
+                          : "Completed recordings will appear here, ready to revisit."
+                      }
+                    />
+                  )}
+                </>
+              )}
+              {page === "Settings" && (
+                <>
+                  <PageTitle
+                    eyebrow="MAKE IT YOURS"
+                    title="Studio settings."
+                    desc="Recording preferences, storage and connected browsers."
+                  />
+                  {settings ? (
+                    <SettingsPanel
+                      settings={settings}
+                      set={settingsSet}
+                      sessions={sessions}
+                      reload={() => request("/sessions").then(sessionsSet)}
+                      action={action}
+                      diag={diag}
+                      setDiag={diagSet}
+                      disconnect={() => {
+                        clearSession();
+                      }}
+                    />
+                  ) : (
+                    <p>Loading settings…</p>
+                  )}
+                </>
+              )}
+            </>
+          )}
+        </div>
+      </main>
+      {modal === "record" && (
+        <Modal
+          title="New recording"
+          error={error}
+          close={() => {
+            modalSet("");
+            errorSet("");
+          }}
+        >
+          <RecordForm
+            submit={(data: Any) =>
+              action(async () => {
+                await send("/recordings/start", data);
+                modalSet("");
+              })
+            }
+          />
+        </Modal>
+      )}
+      {modal === "channel" && (
+        <Modal
+          title={selected ? "Edit channel" : "Add a channel"}
+          error={error}
+          close={() => {
+            modalSet("");
+            errorSet("");
+          }}
+        >
+          <ChannelForm
+            initial={selected}
+            submit={(data: Any) =>
+              action(async () => {
+                const c = selected
+                  ? await send("/channels/" + selected.id, data, "PATCH")
+                  : await send("/channels", data);
+                if (selected) selectedSet(c);
+                modalSet("");
+              })
+            }
+          />
+        </Modal>
+      )}
+      {modal === "player" &&
+        playerId &&
+        recordings.find((r) => r.id === playerId) && (
+          <Modal
+            title={
+              recordings.find((r) => r.id === playerId)?.title || "Recording"
+            }
+            error={error}
+            close={() => {
+              modalSet("");
+              errorSet("");
+            }}
+          >
+            <Player
+              recording={recordings.find((r) => r.id === playerId)!}
+              action={action}
+              close={() => modalSet("")}
+            />
+          </Modal>
+        )}
+    </div>
+  );
 }
-function PageTitle({eyebrow,title,desc,action}:any){return <div className="page-title"><div><div className="eyebrow">{eyebrow}</div><h1>{title}</h1><p>{desc}</p></div>{action}</div>}
-function Stat({icon,label,value,note}:any){return <div className="stat"><div className="stat-head"><span>{label}</span>{icon}</div><strong>{value}</strong><small>{note}</small></div>}
-function Empty({icon,title,text,button}:any){return <div className="empty"><div className="empty-icon">{icon}</div><h3>{title}</h3><p>{text}</p>{button}</div>}
-function RecordRow({r,open,stop}:any){return <div className="record-row"><button className="row-main" onClick={open}><span className="row-icon"><Clapperboard size={19}/></span><span><b>{r.title||'Untitled recording'}</b><small>{r.platform} · {date(r.startedAt)}</small></span></button><span className={'pill '+(r.status==='recording'?'live':'')}>{r.status}</span><span className="row-size">{bytes(r.fileSize)}</span>{active(r.status)&&<button className="secondary" onClick={stop}>Stop</button>}</div>}
-function Modal({title,close,children}:any){return <div className="overlay" onMouseDown={e=>{if(e.target===e.currentTarget)close()}}><div className="modal" role="dialog" aria-modal="true" aria-label={title}><div className="modal-head"><h2>{title}</h2><button className="iconbtn" onClick={close} aria-label="Close"><X size={20}/></button></div>{children}</div></div>}
-function RecordForm({submit}:any){const [url,set]=useState(''),[title,t]=useState(''),[quality,q]=useState('best'),[format,f]=useState('mp4');return <form onSubmit={e=>{e.preventDefault();submit({url,title:title||undefined,quality,format})}}><label>Stream URL<input required type="url" value={url} onChange={e=>set(e.target.value)} placeholder="https://..."/></label><label>Title <small>Optional</small><input value={title} onChange={e=>t(e.target.value)} placeholder="Give this recording a name"/></label><div className="form-grid"><label>Quality<select value={quality} onChange={e=>q(e.target.value)}>{['best','1080p','720p','480p','worst'].map(x=><option key={x}>{x}</option>)}</select></label><label>Format<select value={format} onChange={e=>f(e.target.value)}><option>mp4</option><option>mkv</option></select></label></div><button className="primary" type="submit">Start recording</button></form>}
-function ChannelForm({initial,submit}:any){const [data,set]=useState(initial?{name:initial.name,url:initial.url,platform:initial.platform,quality:initial.quality,autoRecord:initial.autoRecord,enabled:initial.enabled}:{name:'',url:'',quality:'best',autoRecord:false,enabled:true});return <form onSubmit={e=>{e.preventDefault();submit(data)}}><label>Name<input required value={data.name} onChange={e=>set({...data,name:e.target.value})}/></label><label>Channel URL<input required type="url" value={data.url} onChange={e=>set({...data,url:e.target.value})} placeholder="https://..."/></label><label>Quality<select value={data.quality||'best'} onChange={e=>set({...data,quality:e.target.value})}>{['best','1080p','720p','480p','worst'].map(x=><option key={x}>{x}</option>)}</select></label><label className="check"><input type="checkbox" checked={data.enabled} onChange={e=>set({...data,enabled:e.target.checked})}/> Monitor this channel</label><label className="check"><input type="checkbox" checked={data.autoRecord} onChange={e=>set({...data,autoRecord:e.target.checked})}/> Automatically record when live</label><button className="primary">Save channel</button></form>}
-function ChannelDetail({channel:c,back,edit,action}:any){const [stats,set]=useState<Any|null>(null);useEffect(()=>{request(`/channels/${c.id}/stats`).then(set).catch(()=>{})},[c.id]);return <div className="detail"><button className="link" onClick={back}>← All channels</button><div className="detail-card"><div className="channel-avatar large">{c.name?.[0]}</div><div><h2>{c.name}</h2><p>{c.url}</p><span className={'pill '+(c.isLive?'live':'')}>{c.isLive?'LIVE':'OFFLINE'}</span></div></div><div className="button-row"><button className="secondary" onClick={()=>action(()=>send(`/channels/${c.id}/check`,{}))}><RefreshCw size={15}/> Check now</button><button className="secondary" onClick={edit}>Edit channel</button><button className="secondary" onClick={()=>action(()=>send(`/channels/${c.id}`,{autoRecord:!c.autoRecord},'PATCH'))}>Auto-record {c.autoRecord?'on':'off'}</button><button className="danger" onClick={()=>{if(confirm('Delete this channel? Recordings are kept.'))action(async()=>{await request(`/channels/${c.id}`,{method:'DELETE'});back()})}}><Trash2 size={15}/> Delete</button></div><div className="detail-info"><div><small>MONITORING</small><b>{c.enabled?'Enabled':'Paused'}</b></div><div><small>LAST CHECKED</small><b>{date(c.lastChecked)}</b></div><div><small>RECORDINGS</small><b>{stats?.recordings?.length??'—'}</b></div></div></div>}
-function Thumbnail({r}:any){const [url,set]=useState('');useEffect(()=>{if(r.hasThumbnail)send(`/recordings/${r.id}/media-ticket`,{kind:'thumbnail'}).then(t=>set(t.url)).catch(()=>{})},[r.id,r.hasThumbnail]);return <div className="thumbnail">{url?<img src={url} alt=""/>:<Clapperboard size={32}/>}<span>▶</span></div>}
-function Player({recording:r,action,close}:any){const [ticket,set]=useState<Any|null>(null),[kind,kindSet]=useState('stream'),[msg,msgSet]=useState('');const video=useRef<HTMLVideoElement>(null),position=useRef({time:0,paused:true});const renew=useCallback(async(k:string)=>{try{if(video.current)position.current={time:video.current.currentTime,paused:video.current.paused};set(await send(`/recordings/${r.id}/media-ticket`,{kind:k}));msgSet('')}catch(e:any){msgSet(e.message)}},[r.id]);useEffect(()=>{if(r.hasPreview||r.status==='completed')renew(kind)},[kind,renew,r.hasPreview,r.status]);useEffect(()=>{if(!ticket?.expiresAt)return;const t=setTimeout(()=>renew(kind),Math.max(1000,new Date(ticket.expiresAt).getTime()-Date.now()-30000));return()=>clearTimeout(t)},[ticket,kind,renew]);async function download(){try{const t=await send(`/recordings/${r.id}/media-ticket`,{kind:'download'});const a=document.createElement('a');a.href=t.url;a.download='';a.click()}catch(e:any){msgSet(e.message)}}return <div>{msg&&<p className="alert">{msg}</p>}{ticket?<video ref={video} key={ticket.url} controls src={ticket.url} onLoadedMetadata={e=>{e.currentTarget.currentTime=position.current.time;if(!position.current.paused)e.currentTarget.play().catch(()=>{})}}/>:<div className="player-empty">{active(r.status)?'Recording in progress.':'No playable media available.'}</div>}<div className="player-meta"><span className="pill">{r.status}</span><span>{date(r.startedAt)} · {bytes(r.fileSize)}</span></div><div className="button-row">{r.hasPreview&&<button className="secondary" onClick={()=>kindSet(kind==='preview'?'stream':'preview')}>{kind==='preview'?'Full recording':'Preview'}</button>}{!active(r.status)&&<button className="secondary" onClick={download}><Download size={15}/> Download</button>}{active(r.status)&&<button className="secondary" onClick={()=>action(()=>send(`/recordings/${r.id}/stop`,{}))}>Stop recording</button>}{!active(r.status)&&<button className="secondary" onClick={()=>action(()=>send(`/recordings/${r.id}/upload`,{}))}>Upload to my storage</button>}{!active(r.status)&&<button className="danger" onClick={()=>{if(confirm('Delete this recording and its file?'))action(async()=>{await request(`/recordings/${r.id}`,{method:'DELETE'});close()})}}><Trash2 size={15}/> Delete</button>}</div></div>}
-function SettingsPanel({settings:s,set,sessions,reload,action,diag,setDiag,disconnect}:any){const [key,keySet]=useState(''),[secret,secretSet]=useState('');const change=(k:string,v:any)=>set({...s,[k]:v});const locked=(k:string)=>s.lockedFields?.includes(k);return <><form className="settings" onSubmit={e=>{e.preventDefault();action(async()=>{const data={...s};delete data.hasS3Credentials;delete data.lockedFields;const result=await send('/settings',{...data,...(key?{s3AccessKeyId:key}:{}),...(secret?{s3SecretAccessKey:secret}:{})},'PUT');set(result);keySet('');secretSet('')})}}><div className="settings-block"><div><h2>Recording</h2><p>Choose how new recordings are saved.</p></div><div className="fields"><label>Recording folder<input disabled={locked('recordingsPath')} value={s.recordingsPath||''} onChange={e=>change('recordingsPath',e.target.value)}/><small>Changes apply to new recordings.</small></label><div className="form-grid"><label>Default quality<select value={s.defaultQuality} onChange={e=>change('defaultQuality',e.target.value)}>{['best','1080p','720p','480p','worst'].map(x=><option key={x}>{x}</option>)}</select></label><label>Format<select value={s.defaultFormat} onChange={e=>change('defaultFormat',e.target.value)}><option>mp4</option><option>mkv</option></select></label></div>{[['monitorIntervalSeconds','Check interval (seconds)'],['maxConcurrentRecordings','Maximum concurrent recordings'],['maxDiskUsagePercent','Maximum disk usage (%)'],['autoCleanupDays','Keep recordings for (days)']].map(([k,l])=><label key={k}>{l}<input type="number" min="1" disabled={locked(k)} value={s[k]??''} onChange={e=>change(k,Number(e.target.value))}/></label>)}<label className="check"><input type="checkbox" checked={s.autoCleanupEnabled} onChange={e=>change('autoCleanupEnabled',e.target.checked)}/> Enable automatic cleanup</label></div></div><div className="settings-block"><div><h2>Your storage</h2><p>Optional direct uploads from your companion to your own S3-compatible storage.</p></div><div className="fields"><label className="check"><input type="checkbox" checked={s.s3Enabled} onChange={e=>change('s3Enabled',e.target.checked)}/> Enable S3 uploads</label>{s.s3Enabled&&<>{[['s3Bucket','Bucket'],['s3Region','Region'],['s3Endpoint','Endpoint (optional)']].map(([k,l])=><label key={k}>{l}<input value={s[k]||''} onChange={e=>change(k,e.target.value)}/></label>)}<label>Access key ID<input autoComplete="off" value={key} onChange={e=>keySet(e.target.value)} placeholder={s.hasS3Credentials?'Saved · leave blank to keep':'Access key ID'}/></label><label>Secret access key<input type="password" autoComplete="new-password" value={secret} onChange={e=>secretSet(e.target.value)} placeholder={s.hasS3Credentials?'Saved · leave blank to keep':'Secret access key'}/></label></>}</div></div><div className="save-row"><button className="primary">Save settings <Check size={16}/></button></div></form><div className="settings-block"><div><h2>Paired browsers</h2><p>Revoke access to a browser you no longer use.</p></div><div className="fields">{sessions.length?sessions.map((session:Any)=><div className="session" key={session.id}><span><b>{session.name||'Browser'}</b><small>Created {date(session.createdAt)}</small></span><button className="secondary" onClick={()=>action(async()=>{await request(`/sessions/${session.id}`,{method:'DELETE'});await reload()})}>Revoke</button></div>):<p>No paired sessions found.</p>}<button className="secondary" onClick={()=>action(async()=>{await send('/sessions/revoke',{});disconnect()})}>Disconnect this browser</button></div></div><div className="settings-block"><div><h2>Diagnostics & updates</h2><p>Review local diagnostic information or check for a new release.</p></div><div className="fields"><div className="button-row"><button className="secondary" onClick={()=>action(async()=>setDiag(await request('/diagnostics')))}>Show diagnostics</button><a className="secondary" href="/downloads/">Release downloads <ExternalLink size={14}/></a></div>{diag&&<pre>{JSON.stringify(diag,null,2)}</pre>}</div></div></>}
-createRoot(document.getElementById('root')!).render(<App/>);
+createRoot(document.getElementById("root")!).render(<App />);
