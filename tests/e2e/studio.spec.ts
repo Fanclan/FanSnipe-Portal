@@ -290,3 +290,41 @@ test("lost pending pairing can be restarted", async ({ page }) => {
   await page.getByRole("button", { name: "Pair this browser" }).click();
   expect(creates).toBe(2);
 });
+test("missing media is terminal until the user explicitly retries", async ({
+  page,
+}) => {
+  await fixture(page);
+  let streamRequests = 0;
+  await page.route("**/api/v1/recordings/r1/media-ticket", async (route) => {
+    if (route.request().postDataJSON()?.kind !== "stream")
+      return route.fallback();
+    streamRequests++;
+    return route.fulfill({
+      status: 404,
+      json: { error: "Media not found" },
+      headers: { "Access-Control-Allow-Origin": "*" },
+    });
+  });
+  await page.goto("/app/");
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  await page.getByRole("button", { name: /A saved recording/ }).click();
+  await expect(
+    page.getByText("Media is unavailable for this recording."),
+  ).toBeVisible();
+  await page.waitForTimeout(5300);
+  expect(streamRequests).toBe(1);
+  await page.getByRole("button", { name: "Try playback again" }).click();
+  await expect.poll(() => streamRequests).toBe(2);
+});
+test("desktop recording folder is read-only and explains the native picker", async ({
+  page,
+}) => {
+  await fixture(page);
+  await page.goto("/app/");
+  await page.getByRole("button", { name: "Settings", exact: true }).click();
+  await expect(page.getByLabel("Recording folder")).toHaveAttribute(
+    "readonly",
+    "",
+  );
+  await expect(page.getByText(/native recording folder picker/)).toBeVisible();
+});

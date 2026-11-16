@@ -450,6 +450,7 @@ export function Thumbnail({ r }: any) {
   );
 }
 export function SettingsPanel({
+  mode,
   settings: s,
   set,
   sessions,
@@ -464,7 +465,10 @@ export function SettingsPanel({
     [touched, touchedSet] = useState<Set<string>>(new Set()),
     [saving, savingSet] = useState(false),
     [saveError, saveErrorSet] = useState(""),
-    [approvalMessage, approvalMessageSet] = useState("");
+    [approvalMessage, approvalMessageSet] = useState(""),
+    [pendingApproval, pendingApprovalSet] = useState<Any | null>(null),
+    [setupToken, setupTokenSet] = useState(""),
+    [approving, approvingSet] = useState(false);
   const initial = useRef({ ...s });
   const change = (k: string, v: any) => {
     touchedSet((previous) => new Set(previous).add(k));
@@ -492,7 +496,14 @@ export function SettingsPanel({
                 "s3Region",
                 "s3Endpoint",
               ];
+              const pureDisable =
+                initial.current.s3Enabled === true &&
+                s.s3Enabled === false &&
+                ["s3Bucket", "s3Region", "s3Endpoint"].every(
+                  (k) => s[k] === initial.current[k],
+                );
               if (
+                !pureDisable &&
                 destinationKeys.some(
                   (k) => k in data && data[k] !== initial.current[k],
                 )
@@ -504,8 +515,11 @@ export function SettingsPanel({
                   "/settings/s3-approvals",
                   destination,
                 );
+                pendingApprovalSet({ ...pending, destination });
                 approvalMessageSet(
-                  "Approve this storage destination in the companion.",
+                  mode === "docker"
+                    ? "Approve this destination with your Docker setup token."
+                    : "Approve this storage destination in the companion.",
                 );
                 let approved = "";
                 while (Date.now() < Date.parse(pending.expiresAt)) {
@@ -548,9 +562,13 @@ export function SettingsPanel({
               secretSet("");
               touchedSet(new Set());
               approvalMessageSet("Settings saved.");
+              pendingApprovalSet(null);
+              setupTokenSet("");
             } catch (e: any) {
               saveErrorSet(e.message);
               approvalMessageSet("");
+              pendingApprovalSet(null);
+              setupTokenSet("");
             } finally {
               savingSet(false);
             }
@@ -563,6 +581,50 @@ export function SettingsPanel({
           </p>
         )}
         {approvalMessage && <p role="status">{approvalMessage}</p>}
+        {mode === "docker" && pendingApproval && bundled && (
+          <div className="approval-card">
+            <p>
+              Destination:{" "}
+              <strong>{pendingApproval.destination.s3Bucket}</strong> ·{" "}
+              {pendingApproval.destination.s3Region} ·{" "}
+              {pendingApproval.destination.s3Endpoint || "default S3 endpoint"}
+            </p>
+            <label>
+              Docker setup token
+              <input
+                type="password"
+                autoComplete="off"
+                value={setupToken}
+                onChange={(e) => setupTokenSet(e.target.value)}
+              />
+            </label>
+            <button
+              type="button"
+              className="secondary"
+              disabled={!setupToken || approving}
+              onClick={async () => {
+                approvingSet(true);
+                try {
+                  await request(
+                    `/settings/s3-approvals/${pendingApproval.id}/approve`,
+                    {
+                      method: "POST",
+                      headers: { "X-Setup-Token": setupToken },
+                    },
+                  );
+                  setupTokenSet("");
+                  approvalMessageSet("Destination approved. Saving settings…");
+                } catch (e: any) {
+                  saveErrorSet(e.message);
+                } finally {
+                  approvingSet(false);
+                }
+              }}
+            >
+              Approve destination
+            </button>
+          </div>
+        )}
         <div className="settings-block">
           <div>
             <h2>Recording</h2>
@@ -571,12 +633,12 @@ export function SettingsPanel({
           <div className="fields">
             <label>
               Recording folder
-              <input
-                disabled={locked("recordingsPath")}
-                value={s.recordingsPath || ""}
-                onChange={(e) => change("recordingsPath", e.target.value)}
-              />
-              <small>Changes apply to new recordings.</small>
+              <input readOnly value={s.recordingsPath || ""} />
+              <small>
+                {mode === "desktop"
+                  ? "Change this folder using the companion’s native recording folder picker. Changes apply to new recordings."
+                  : "The recording folder is configured by the container or companion operator."}
+              </small>
             </label>
             <div className="form-grid">
               <label>

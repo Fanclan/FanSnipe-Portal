@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Trash2 } from "lucide-react";
-import { bytes, mediaUrl, request, send } from "./api";
+import { ApiError, bytes, mediaUrl, request, send } from "./api";
 type Recording = {
   id: string;
   title: string;
@@ -30,12 +30,14 @@ export function Player({
     [message, setMessage] = useState(""),
     [uploading, setUploading] = useState(false),
     [uploaded, setUploaded] = useState(false),
-    [storage, setStorage] = useState(false);
+    [storage, setStorage] = useState(false),
+    [terminal, setTerminal] = useState(false);
   const video = useRef<HTMLVideoElement>(null),
     position = useRef({ time: 0, paused: true }),
     retry = useRef<ReturnType<typeof setTimeout> | undefined>(undefined),
     inflight = useRef(false),
-    mounted = useRef(true);
+    mounted = useRef(true),
+    failures = useRef(0);
   const snapshot = () => {
     if (video.current)
       position.current = {
@@ -57,8 +59,25 @@ export function Player({
       setMessage("");
     } catch (e: any) {
       if (mounted.current) {
-        setMessage(e.message);
-        retry.current = setTimeout(renew, 5000);
+        const permanent =
+          e instanceof ApiError
+            ? e.status >= 400 &&
+              e.status < 500 &&
+              e.status !== 408 &&
+              e.status !== 429
+            : !(e instanceof TypeError);
+        failures.current++;
+        if (permanent || failures.current >= 3) {
+          setTerminal(true);
+          setMessage(
+            permanent && e instanceof ApiError && e.status === 404
+              ? "Media is unavailable for this recording."
+              : e.message,
+          );
+        } else {
+          setMessage(e.message);
+          retry.current = setTimeout(renew, 5000);
+        }
       }
     } finally {
       inflight.current = false;
@@ -80,24 +99,25 @@ export function Player({
     if (!active(r.status)) renew();
   }, [renew, r.status]);
   useEffect(() => {
-    if (!ticket) return;
+    if (!ticket || terminal) return;
     const t = setTimeout(
       renew,
       Math.max(1000, Date.parse(ticket.expiresAt) - Date.now() - 30000),
     );
     return () => clearTimeout(t);
-  }, [ticket, renew]);
+  }, [ticket, renew, terminal]);
   async function showImage() {
     if (showPreview) {
       setShowPreview(false);
       return;
     }
-    snapshot();
     try {
       const t = await send(`/recordings/${r.id}/media-ticket`, {
         kind: "preview",
       });
-      setPreview(mediaUrl(t.url));
+      const url = mediaUrl(t.url);
+      snapshot();
+      setPreview(url);
       setShowPreview(true);
     } catch (e: any) {
       setMessage(e.message);
@@ -151,11 +171,20 @@ export function Player({
           controls
           src={ticket.url}
           onError={() => {
-            setMessage("Playback interrupted; renewing access…");
+            const code = video.current?.error?.code;
             clearTimeout(retry.current);
-            retry.current = setTimeout(renew, 5000);
+            if (code === 3 || code === 4 || ++failures.current >= 3) {
+              setTerminal(true);
+              setMessage(
+                "This recording cannot be played in this browser. You can try downloading it.",
+              );
+            } else {
+              setMessage("Playback interrupted; renewing access…");
+              retry.current = setTimeout(renew, 5000);
+            }
           }}
           onLoadedMetadata={(e) => {
+            failures.current = 0;
             e.currentTarget.currentTime = Math.min(
               position.current.time,
               e.currentTarget.duration || position.current.time,
@@ -168,7 +197,9 @@ export function Player({
         <div className="player-empty">
           {active(r.status)
             ? "Recording in progress."
-            : "Checking for available media…"}
+            : terminal
+              ? "Playback unavailable."
+              : "Checking for available media…"}
         </div>
       )}
       <div className="player-meta">
@@ -178,6 +209,18 @@ export function Player({
         </span>
       </div>
       <div className="button-row">
+        {terminal && (
+          <button
+            className="secondary"
+            onClick={() => {
+              failures.current = 0;
+              setTerminal(false);
+              void renew();
+            }}
+          >
+            Try playback again
+          </button>
+        )}
         {r.hasPreview && (
           <button className="secondary" onClick={showImage}>
             {showPreview ? "Full recording" : "Preview frame"}

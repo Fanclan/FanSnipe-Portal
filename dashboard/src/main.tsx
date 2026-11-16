@@ -112,9 +112,15 @@ function App() {
         "Your browser session expired or was revoked. Please pair again.",
       );
     };
+    const storageHandler = (event: StorageEvent) => {
+      if (event.key === "streamsnipe.token.v1" && !event.newValue) handler();
+    };
     window.addEventListener("streamsnipe:unauthorized", handler);
-    return () =>
+    window.addEventListener("storage", storageHandler);
+    return () => {
       window.removeEventListener("streamsnipe:unauthorized", handler);
+      window.removeEventListener("storage", storageHandler);
+    };
   }, [clearSession]);
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
@@ -450,7 +456,12 @@ function App() {
                   </button>
                 </div>
               </div>
-              <a className="help" href="/docs/">
+              <a
+                className="help"
+                href={docsUrl}
+                target={bundled ? "_blank" : undefined}
+                rel={bundled ? "noopener noreferrer" : undefined}
+              >
                 Need a hand? Read the setup guide ↗
               </a>
             </div>
@@ -825,6 +836,7 @@ function App() {
                   />
                   {settings ? (
                     <SettingsPanel
+                      mode={info?.mode}
                       settings={settings}
                       set={settingsSet}
                       sessions={sessions}

@@ -59,6 +59,7 @@ test("bundled dashboard pairs with real engine, plays local ranges and revokes",
     dashboardPath: path.resolve("dist-dashboard"),
     port: 0,
     mode: "docker",
+    setupToken: "operator-secret",
     monitor: false,
   });
   try {
@@ -89,8 +90,14 @@ test("bundled dashboard pairs with real engine, plays local ranges and revokes",
     db.close();
     const origins: string[] = [],
       ranges: string[] = [];
-    let previewResponse = false;
+    let previewResponse = false,
+      approvalRequests = 0;
     page.on("request", (req) => {
+      if (
+        req.url().endsWith("/settings/s3-approvals") &&
+        req.method() === "POST"
+      )
+        approvalRequests++;
       origins.push(new URL(req.url()).origin);
       if (req.url().includes("/media/") && req.headers().range)
         ranges.push(req.headers().range);
@@ -172,6 +179,58 @@ test("bundled dashboard pairs with real engine, plays local ranges and revokes",
     ).toBeVisible();
     await expect.poll(() => previewResponse).toBe(true);
     expect([...new Set(origins)]).toEqual([origin]);
+    await page.getByRole("button", { name: "Close" }).click();
+    await page.getByRole("button", { name: "Settings", exact: true }).click();
+    await page.getByLabel("Enable S3 uploads").check();
+    await page.getByLabel("Bucket").fill("my-test-bucket");
+    await page.getByRole("button", { name: "Save settings" }).click();
+    await expect(
+      page.getByText("Approve this destination with your Docker setup token."),
+    ).toBeVisible();
+    await expect(
+      page.getByText("my-test-bucket", { exact: false }),
+    ).toBeVisible();
+    await page.getByLabel("Docker setup token").fill("operator-secret");
+    await page.getByRole("button", { name: "Approve destination" }).click();
+    await expect(page.getByText("Settings saved.")).toBeVisible({
+      timeout: 5000,
+    });
+    expect(approvalRequests).toBe(1);
+    await page.getByLabel("Enable S3 uploads").uncheck();
+    const disabledResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith("/api/v1/settings") &&
+        response.request().method() === "PUT",
+    );
+    await page.getByRole("button", { name: "Save settings" }).click();
+    const disabled = await disabledResponse;
+    expect(disabled.status()).toBe(200);
+    expect((await disabled.json()).s3Enabled).toBe(false);
+    expect(approvalRequests).toBe(1);
+    // A second tab shares the credential; disconnect must clear both tabs immediately.
+    const other = await page.context().newPage();
+    await other.goto(origin + "/app/");
+    await expect(
+      other.getByRole("heading", { name: "Good to see you." }),
+    ).toBeVisible();
+    await page.getByRole("button", { name: "Disconnect this browser" }).click();
+    await expect(
+      page.getByRole("heading", { name: /connect your studio/ }),
+    ).toBeVisible();
+    await expect(
+      other.getByRole("heading", { name: /connect your studio/ }),
+    ).toBeVisible();
+    expect(
+      await other.evaluate(() => localStorage.getItem("streamsnipe.token.v1")),
+    ).toBeNull();
+    await other.close();
+    // Pair again to verify independent remote revocation.
+    await page.getByRole("button", { name: "Pair this browser" }).click();
+    await expect.poll(() => engine.auth.listPending().length).toBe(1);
+    expect(engine.auth.approve(engine.auth.listPending()[0].id)).toBe(true);
+    await expect(
+      page.getByRole("heading", { name: "Good to see you." }),
+    ).toBeVisible();
     // A second browser session is paired through the same local approval API and revokes the first.
     const post = (url: string, body: any, token?: string) =>
       fetch(origin + "/api/v1" + url, {
