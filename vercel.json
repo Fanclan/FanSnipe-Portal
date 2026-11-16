@@ -1,13 +1,26 @@
 {
   "rewrites": [
     {
-      "source": "/app/:path*",
+      "source": "/app",
+      "destination": "/app/index.html"
+    },
+    {
+      "source": "/app/(.*)",
       "destination": "/app/index.html"
     }
   ],
   "headers": [
     {
-      "source": "/app/:path*",
+      "source": "/app",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex, nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/app/(.*)",
       "headers": [
         {
           "key": "X-Robots-Tag",
