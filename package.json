@@ -1,0 +1,42 @@
+{
+  "name": "streamsnipe-portal",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "npm run build:dashboard && ASTRO_TELEMETRY_DISABLED=1 astro build && node scripts/copy-dashboard.mjs",
+    "build:dashboard": "vite build --config dashboard/vite.config.ts",
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "typecheck": "tsc --noEmit",
+    "build:artifact": "npm run build:dashboard && node scripts/artifact.mjs",
+    "lint": "eslint dashboard/src tests *.config.ts"
+  },
+  "dependencies": {
+    "astro": "^7.4.12",
+    "lucide-react": "^0.468.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "^4.14.0",
+    "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.49.1",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^6.3.0",
+    "eslint": "^10.15.0",
+    "jsdom": "^25.0.1",
+    "typescript": "^5.7.2",
+    "typescript-eslint": "^8.72.2",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.0"
+  },
+  "engines": {
+    "node": ">=22.23.4"
+  },
+  "overrides": {
+    "minimatch": "^11.0.8"
+  }
+}
