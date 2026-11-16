@@ -5,3 +5,5 @@ test('dashboard pairs and displays real companion data',async({page})=>{await pa
 
 test('public and pairing pages have no serious accessibility violations',async({page})=>{for(const path of ['/','/app/']){await page.goto(path);const results=await new AxeBuilder({page}).withTags(['wcag2a','wcag2aa','wcag21a','wcag21aa']).analyze();expect(results.violations.filter(v=>v.impact==='serious'||v.impact==='critical')).toEqual([])}});
 test('marketing page fits narrow mobile screens',async({page})=>{for(const width of [390,423]){await page.setViewportSize({width,height:844});await page.goto('/');expect(await page.evaluate(()=>document.documentElement.scrollWidth)).toBeLessThanOrEqual(width)}});
+
+test('nested dashboard fallback loads its assets',async({page})=>{await page.goto('/app/example/nested/');await expect(page.getByRole('heading',{name:/connect your studio/})).toBeVisible()});
