@@ -8,6 +8,8 @@ StreamSnipe gives you a modern web interface for a recorder running on your own 
 
 Maintained by [zerodayprime](https://github.com/zerodayprime) under [Fanclan](https://github.com/Fanclan). The recording engine and distributions live in [StreamSnipe Companion](https://github.com/Fanclan/StreamSnipe-Companion).
 
+Visit the [live website and web dashboard](https://streamsnipe-portal.vercel.app/).
+
 ## Architecture
 
 - Static public pages built with Astro.
