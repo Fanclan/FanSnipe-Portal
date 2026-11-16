@@ -40,5 +40,21 @@
   },
   "overrides": {
     "minimatch": "^11.0.8"
+  },
+  "author": {
+    "name": "The team at Fanclan.io",
+    "url": "https://fanclan.io"
+  },
+  "maintainers": [
+    "zerodayprime"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Fanclan/StreamSnipe-Portal.git"
+  },
+  "homepage": "https://fanclan.io",
+  "bugs": {
+    "url": "https://github.com/Fanclan/StreamSnipe-Portal/issues"
   }
 }
