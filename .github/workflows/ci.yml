@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Fanclan/FanSnipe-Companion
-          ref: 0760dfab374513f9e9f5f104e01403afe0f5c6ea
+          ref: d5092ad74809a308fb4bc1712e8df50a2557818f
           path: .integration/companion
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
