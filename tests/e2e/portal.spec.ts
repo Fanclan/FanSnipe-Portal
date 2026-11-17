@@ -227,10 +227,48 @@ test("Docker-only bridge release appears separately from native installers", asy
   ).toContainText(
     "sha256:3bcd0c443a04ec8e003eaae34fda9e93d74b083a5f5f6e537810b113fe907e6c",
   );
+  const desktop = page.locator("section").filter({
+    has: page.getByRole("heading", { name: /Version 0\.1\.1-beta\.1/ }),
+  });
   await expect(
-    page.getByRole("link", { name: "Windows x64 (EXE) ↗" }),
+    desktop.getByRole("link", { name: "Windows x64 (EXE) ↗" }),
   ).toHaveAttribute("href", /v0\.1\.1-beta\.1\/FanSnipe\.Setup\.0\.1\.1\.exe$/);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(320);
+});
+
+test("recording fix lists desktop installers and their separate Docker verification", async ({
+  page,
+}) => {
+  await page.goto("/downloads/");
+  const release = page.locator("section").filter({
+    has: page.getByRole("heading", { name: /Version 0\.1\.3-beta\.1/ }),
+  });
+  const source = "https://github.com/Fanclan/FanSnipe-Companion/releases";
+  const desktop = source + "/download/desktop-v0.1.3-beta.1/";
+  const docker = source + "/download/docker-v0.1.3-beta.1/";
+  for (const [label, url] of [
+    [
+      "macOS 13+ · Apple Silicon (DMG) ↗",
+      desktop + "FanSnipe-0.1.3-arm64.dmg",
+    ],
+    ["macOS 13+ · Intel (DMG) ↗", desktop + "FanSnipe-0.1.3.dmg"],
+    ["Windows x64 (EXE) ↗", desktop + "FanSnipe.Setup.0.1.3.exe"],
+    ["Release manifest ↗", desktop + "release-manifest.json"],
+    ["Published checksums ↗", desktop + "SHA256SUMS.txt"],
+    [
+      "Docker release verification manifest (JSON) ↗",
+      docker + "release-manifest.json",
+    ],
+  ]) {
+    await expect(
+      release.getByRole("link", { name: label, exact: true }),
+    ).toHaveAttribute("href", url);
+  }
+  await expect(
+    release.getByText("OCI image index digest:", { exact: false }),
+  ).toContainText(
+    "sha256:9f6828664fac253437152256c656419920a09da7beb55fee59c190d1f2fef9ec",
+  );
 });
