@@ -299,7 +299,7 @@ function App() {
       <aside className="sidebar">
         <a
           className="brand"
-          aria-label="FanSnipe studio home"
+          aria-label="FanSnipe Recording Studio home"
           href={bundled ? "/app/" : "/"}
         >
           <span className="logo">
