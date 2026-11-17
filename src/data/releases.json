@@ -1,6 +1,49 @@
 {
   "releases": [
     {
+      "version": "0.1.3-beta.1",
+      "date": "2026-11-17",
+      "verified": true,
+      "stage": "beta",
+      "signingStatus": "unsigned",
+      "windowsEightHourSoak": "deferred",
+      "notes": [
+        "Recordings now combine audio and video when a stream supplies them separately. Start a new capture after upgrading. Earlier zero-byte entries contain no media to recover.",
+        "The library shows the failure reason when the companion can identify it.",
+        "New public stream routes include Picarto channels and public rooms on BongaCams and Stripchat. Availability depends on the site and stream.",
+        "macOS builds are not notarized."
+      ],
+      "artifacts": [
+        {
+          "label": "macOS 13+ \u00b7 Apple Silicon (DMG)",
+          "url": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/desktop-v0.1.3-beta.1/FanSnipe-0.1.3-arm64.dmg",
+          "sha256": "032f04d695fe7554a8d531e792e570cbb733c6a09eb45ac6b8e642bc5c7e556b"
+        },
+        {
+          "label": "macOS 13+ \u00b7 Intel (DMG)",
+          "url": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/desktop-v0.1.3-beta.1/FanSnipe-0.1.3.dmg",
+          "sha256": "8de0056c7a0f77c2a5bd20f6bfead5ecb0755bdb9e9a4c3acd956de024e61721"
+        },
+        {
+          "label": "Windows x64 (EXE)",
+          "url": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/desktop-v0.1.3-beta.1/FanSnipe.Setup.0.1.3.exe",
+          "sha256": "8f9026f28252d14f27baf6cc3b4819a8b921aac868715eb9eaaaf3394fa2d5f7"
+        },
+        {
+          "label": "Docker release verification manifest (JSON)",
+          "url": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/docker-v0.1.3-beta.1/release-manifest.json",
+          "sha256": "bfb4137905d7d39f5346562aec11289973978f8a93536c8ea85422ba5b63b61c"
+        }
+      ],
+      "releaseUrl": "https://github.com/Fanclan/FanSnipe-Companion/releases/tag/desktop-v0.1.3-beta.1",
+      "verificationUrl": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/desktop-v0.1.3-beta.1/release-manifest.json",
+      "checksumsUrl": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/desktop-v0.1.3-beta.1/SHA256SUMS.txt",
+      "container": {
+        "reference": "ghcr.io/fanclan/fansnipe:docker-v0.1.3-beta.1",
+        "digest": "sha256:9f6828664fac253437152256c656419920a09da7beb55fee59c190d1f2fef9ec"
+      }
+    },
+    {
       "version": "0.1.2-beta.1",
       "date": "2026-11-17",
       "verified": true,
