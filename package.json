@@ -22,9 +22,11 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.14.0",
     "@eslint/js": "^10.0.1",
+    "@fanclan/fansnipe-protocol": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/protocol-v1.0.2/fanclan-fansnipe-protocol-1.0.2.tgz",
     "@playwright/test": "^1.49.1",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
+    "@vercel/routing-utils": "^6.6.1",
     "@vitejs/plugin-react": "^6.3.0",
     "eslint": "^10.15.0",
     "jsdom": "^25.0.1",
@@ -32,14 +34,16 @@
     "typescript": "^5.7.2",
     "typescript-eslint": "^8.72.2",
     "vite": "^8.3.8",
-    "vitest": "^5.1.0",
-    "@fanclan/fansnipe-protocol": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/protocol-v1.0.2/fanclan-fansnipe-protocol-1.0.2.tgz"
+    "vitest": "^5.1.0"
   },
   "engines": {
     "node": "24.x"
   },
   "overrides": {
-    "minimatch": "^11.0.8"
+    "minimatch": "^11.0.8",
+    "@vercel/routing-utils": {
+      "path-to-regexp": "6.3.0"
+    }
   },
   "author": {
     "name": "The team at Fanclan.io",

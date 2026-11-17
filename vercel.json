@@ -29,5 +29,29 @@
       ]
     }
   ],
-  "buildCommand": "node scripts/verify-ci.mjs && npm run build"
+  "buildCommand": "node scripts/verify-ci.mjs && npm run build",
+  "redirects": [
+    {
+      "source": "/",
+      "has": [
+        {
+          "type": "host",
+          "value": "^(?:streamsnipe-portal|fansnipe-portal)\\.vercel\\.app$"
+        }
+      ],
+      "destination": "https://fansnipe.com/",
+      "permanent": true
+    },
+    {
+      "source": "/:path((?:docs|downloads|changelog|privacy|robots\\.txt|sitemap\\.xml)/?)",
+      "has": [
+        {
+          "type": "host",
+          "value": "^(?:streamsnipe-portal|fansnipe-portal)\\.vercel\\.app$"
+        }
+      ],
+      "destination": "https://fansnipe.com/:path",
+      "permanent": true
+    }
+  ]
 }
