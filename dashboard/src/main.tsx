@@ -5,7 +5,7 @@ import type {
   SystemStatus,
   PairingChallenge,
   Session,
-} from "@fanclan/streamsnipe-protocol";
+} from "@fanclan/fansnipe-protocol";
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import {
@@ -115,10 +115,10 @@ function App() {
     const storageHandler = (event: StorageEvent) => {
       if (event.key === "streamsnipe.token.v1" && !event.newValue) handler();
     };
-    window.addEventListener("streamsnipe:unauthorized", handler);
+    window.addEventListener("fansnipe:unauthorized", handler);
     window.addEventListener("storage", storageHandler);
     return () => {
-      window.removeEventListener("streamsnipe:unauthorized", handler);
+      window.removeEventListener("fansnipe:unauthorized", handler);
       window.removeEventListener("storage", storageHandler);
     };
   }, [clearSession]);
@@ -290,7 +290,7 @@ function App() {
             <AudioLines size={20} />
           </span>
           <span>
-            StreamSnipe<small>RECORDING STUDIO</small>
+            FanSnipe<small>RECORDING STUDIO</small>
           </span>
         </a>
         <div className="side-label">WORKSPACE</div>
@@ -383,7 +383,7 @@ function App() {
                 your studio.
               </h1>
               <p>
-                Pair this browser with your local StreamSnipe companion to
+                Pair this browser with your local FanSnipe companion to
                 access your channels and recordings.
               </p>
               <div className="pair-card">

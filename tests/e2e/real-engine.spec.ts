@@ -6,17 +6,17 @@ import { pathToFileURL } from "node:url";
 import { spawnSync } from "node:child_process";
 import { DatabaseSync } from "node:sqlite";
 
-const enginePath = process.env.STREAMSNIPE_ENGINE_DIST;
+const enginePath = process.env.FANSNIPE_ENGINE_DIST || process.env.STREAMSNIPE_ENGINE_DIST;
 test("bundled dashboard pairs with real engine, plays local ranges and revokes", async ({
   page,
 }) => {
   test.skip(
     !enginePath,
-    "Set STREAMSNIPE_ENGINE_DIST to the companion dist/app.js",
+    "Set FANSNIPE_ENGINE_DIST to the companion dist/app.js",
   );
   test.setTimeout(45000);
   const dir = await realpath(
-    await mkdtemp(path.join(tmpdir(), "streamsnipe-browser-")),
+    await mkdtemp(path.join(tmpdir(), "fansnipe-browser-")),
   );
   const media = path.join(dir, "media");
   await mkdir(media);

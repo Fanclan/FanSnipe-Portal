@@ -22,8 +22,8 @@ jobs:
       - name: Fetch pinned companion for real browser integration
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          repository: Fanclan/StreamSnipe-Companion
-          ref: d826dbcbb0f6d9b66007b92d65fb4256320b7af6
+          repository: Fanclan/FanSnipe-Companion
+          ref: 0760dfab374513f9e9f5f104e01403afe0f5c6ea
           path: .integration/companion
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -41,4 +41,4 @@ jobs:
       - run: npx playwright install --with-deps chromium
       - run: npm run test:e2e
         env:
-          STREAMSNIPE_ENGINE_DIST: ${{ github.workspace }}/.integration/companion/dist/app.js
+          FANSNIPE_ENGINE_DIST: ${{ github.workspace }}/.integration/companion/dist/app.js

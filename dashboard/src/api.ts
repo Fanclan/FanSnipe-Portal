@@ -8,11 +8,11 @@ import type {
   PairingChallenge,
   MediaTicket,
   MediaKind,
-} from "@fanclan/streamsnipe-protocol";
+} from "@fanclan/fansnipe-protocol";
 export const DEFAULT_BASE = "http://127.0.0.1:47821";
 export const bundled =
   document
-    .querySelector("meta[name=streamsnipe-transport]")
+    .querySelector("meta[name=fansnipe-transport]")
     ?.getAttribute("content") === "local";
 export const base = bundled ? location.origin : DEFAULT_BASE;
 export const root = base + "/api/v1";
@@ -43,7 +43,7 @@ export async function request<T = any>(
   if (!response.ok) {
     if (response.status === 401 && token && token === getToken()) {
       setToken("");
-      window.dispatchEvent(new Event("streamsnipe:unauthorized"));
+      window.dispatchEvent(new Event("fansnipe:unauthorized"));
     }
     throw new ApiError(
       data.error || `Request failed (${response.status})`,
@@ -131,10 +131,10 @@ declare const __PUBLIC_SITE_URL__: string;
 export const docsUrl = bundled
   ? __PUBLIC_SITE_URL__
     ? new URL("/docs/", __PUBLIC_SITE_URL__).href
-    : "https://github.com/Fanclan/StreamSnipe-Companion#readme"
+    : "https://github.com/Fanclan/FanSnipe-Companion#readme"
   : "/docs/";
 export const downloadsUrl = bundled
   ? __PUBLIC_SITE_URL__
     ? new URL("/downloads/", __PUBLIC_SITE_URL__).href
-    : "https://github.com/Fanclan/StreamSnipe-Companion/releases"
+    : "https://github.com/Fanclan/FanSnipe-Companion/releases"
   : "/downloads/";
