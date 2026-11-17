@@ -86,7 +86,7 @@ describe("transport safety and recovery", () => {
     await expect(request("/channels")).rejects.toThrow("offline");
     expect(getToken()).toBe("secret");
     const listener = vi.fn();
-    window.addEventListener("streamsnipe:unauthorized", listener, {
+    window.addEventListener("fansnipe:unauthorized", listener, {
       once: true,
     });
     await expect(request("/channels")).rejects.toThrow("revoked");

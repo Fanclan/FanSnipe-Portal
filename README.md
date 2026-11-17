@@ -1,14 +1,14 @@
-# StreamSnipe Portal
+# FanSnipe Portal
 
-![StreamSnipe — Your streams. Your storage. Built by Fanclan.io.](public/social-preview.png)
+![FanSnipe — Your streams. Your storage. Built by Fanclan.io.](public/social-preview.png)
 
 **The local-first stream recording dashboard and website — by the team at [Fanclan.io](https://fanclan.io).**
 
-StreamSnipe gives you a modern web interface for a recorder running on your own hardware. This repository contains the public website, documentation, and the single shared dashboard used by the hosted portal, desktop companion, and Docker app.
+FanSnipe gives you a modern web interface for a recorder running on your own hardware. This repository contains the public website, documentation, and the single shared dashboard used by the hosted portal, desktop companion, and Docker app.
 
-Maintained by [zerodayprime](https://github.com/zerodayprime) under [Fanclan](https://github.com/Fanclan). The recording engine and distributions live in [StreamSnipe Companion](https://github.com/Fanclan/StreamSnipe-Companion).
+Maintained by [zerodayprime](https://github.com/zerodayprime) under [Fanclan](https://github.com/Fanclan). The recording engine and distributions live in [FanSnipe Companion](https://github.com/Fanclan/FanSnipe-Companion).
 
-Visit the [live website and web dashboard](https://streamsnipe-portal.vercel.app/).
+The canonical website is [fansnipe.com](https://fansnipe.com/); deployment and DNS activation are managed separately.
 
 ## Architecture
 
@@ -40,4 +40,4 @@ Download links must refer to verified published companion assets. The portal and
 
 ## Contributing and attribution
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). StreamSnipe is built by the team at [Fanclan.io](https://fanclan.io), maintained by [zerodayprime](https://github.com/zerodayprime), and distributed under the [MIT license](LICENSE), retaining the original notice.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md). FanSnipe is built by the team at [Fanclan.io](https://fanclan.io), maintained by [zerodayprime](https://github.com/zerodayprime), and distributed under the [MIT license](LICENSE), retaining the original notice.
