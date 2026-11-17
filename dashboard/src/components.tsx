@@ -8,7 +8,15 @@ import {
   Trash2,
   X,
 } from "lucide-react";
-import { bundled, bytes, downloadsUrl, mediaUrl, request, send } from "./api";
+import {
+  base,
+  bundled,
+  bytes,
+  downloadsUrl,
+  mediaUrl,
+  request,
+  send,
+} from "./api";
 type Any = Record<string, any>;
 const date = (s?: string) => (s ? new Date(s).toLocaleString() : "—");
 const active = (s: string) =>
@@ -470,6 +478,7 @@ export function SettingsPanel({
     [setupToken, setupTokenSet] = useState(""),
     [approving, approvingSet] = useState(false);
   const initial = useRef({ ...s });
+  const hostedDocker = mode === "docker" && !bundled;
   const change = (k: string, v: any) => {
     touchedSet((previous) => new Set(previous).add(k));
     set({ ...s, [k]: v });
@@ -488,7 +497,11 @@ export function SettingsPanel({
             approvalMessageSet("");
             try {
               const data: Any = Object.fromEntries(
-                [...touched].filter((k) => !locked(k)).map((k) => [k, s[k]]),
+                [...touched]
+                  .filter(
+                    (k) => !locked(k) && !(hostedDocker && k.startsWith("s3")),
+                  )
+                  .map((k) => [k, s[k]]),
               );
               const destinationKeys = [
                 "s3Enabled",
@@ -547,10 +560,10 @@ export function SettingsPanel({
                 "/settings",
                 {
                   ...data,
-                  ...(key && !locked("s3AccessKeyId")
+                  ...(key && !hostedDocker && !locked("s3AccessKeyId")
                     ? { s3AccessKeyId: key }
                     : {}),
-                  ...(secret && !locked("s3SecretAccessKey")
+                  ...(secret && !hostedDocker && !locked("s3SecretAccessKey")
                     ? { s3SecretAccessKey: secret }
                     : {}),
                 },
@@ -703,10 +716,23 @@ export function SettingsPanel({
             </p>
           </div>
           <div className="fields">
+            {hostedDocker && (
+              <p>
+                Configure Docker storage in the{" "}
+                <a
+                  href={`${base}/app/`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  local dashboard ↗
+                </a>
+                .
+              </p>
+            )}
             <label className="check">
               <input
                 type="checkbox"
-                disabled={locked("s3Enabled")}
+                disabled={hostedDocker || locked("s3Enabled")}
                 checked={s.s3Enabled}
                 onChange={(e) => change("s3Enabled", e.target.checked)}
               />{" "}
@@ -722,7 +748,7 @@ export function SettingsPanel({
                   <label key={k}>
                     {l}
                     <input
-                      disabled={locked(k)}
+                      disabled={hostedDocker || locked(k)}
                       value={s[k] || ""}
                       onChange={(e) => change(k, e.target.value)}
                     />
@@ -732,7 +758,7 @@ export function SettingsPanel({
                   Access key ID
                   <input
                     autoComplete="off"
-                    disabled={locked("s3AccessKeyId")}
+                    disabled={hostedDocker || locked("s3AccessKeyId")}
                     value={key}
                     onChange={(e) => keySet(e.target.value)}
                     placeholder={
@@ -747,7 +773,7 @@ export function SettingsPanel({
                   <input
                     type="password"
                     autoComplete="new-password"
-                    disabled={locked("s3SecretAccessKey")}
+                    disabled={hostedDocker || locked("s3SecretAccessKey")}
                     value={secret}
                     onChange={(e) => secretSet(e.target.value)}
                     placeholder={

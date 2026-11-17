@@ -41,6 +41,7 @@ import {
   setToken,
 } from "./api";
 import { Player } from "./Player";
+import { OperatorApproval } from "./OperatorApproval";
 import {
   PageTitle,
   Stat,
@@ -205,6 +206,9 @@ function App() {
         .catch((e) => errorSet(e.message));
     }
   }, [page, token]);
+  useEffect(() => {
+    if (!pair) setupTokenSet("");
+  }, [pair]);
   useEffect(() => {
     if (!pair) return;
     let stop = false;
@@ -383,8 +387,8 @@ function App() {
                 your studio.
               </h1>
               <p>
-                Pair this browser with your local FanSnipe companion to
-                access your channels and recordings.
+                Pair this browser with your local FanSnipe companion to access
+                your channels and recordings.
               </p>
               <div className="pair-card">
                 <div className="pair-icon">
@@ -397,6 +401,25 @@ function App() {
                       ? "Your companion is ready to pair. Approve the request in its local interface."
                       : "Start the companion and allow your browser to access local network devices, then try again."}
                   </p>
+                  {!info && !bundled && (
+                    <p>
+                      Using Docker? Open the{" "}
+                      <a
+                        href={`${base}/app/`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        local Docker dashboard ↗
+                      </a>
+                      . A supported Docker build can optionally enable the
+                      same-device bridge with{" "}
+                      <code>FANSNIPE_HOSTED_DASHBOARD=true</code>; use{" "}
+                      <a href="https://fansnipe.com/app/">fansnipe.com/app/</a>{" "}
+                      and keep the port bound to loopback. This connection may
+                      also be blocked by browser permissions or an offline
+                      companion. <a href={docsUrl}>Setup guidance ↗</a>
+                    </p>
+                  )}
                   {info && info.protocolVersion !== 1 && (
                     <p>
                       This studio requires protocol version 1. Update your
@@ -420,6 +443,18 @@ function App() {
                       Pair this browser <ChevronRight size={16} />
                     </button>
                   )}
+                  {pair && info?.mode === "docker" && !bundled && (
+                    <p>
+                      <a
+                        className="secondary"
+                        href={`${base}/app/#approve=${encodeURIComponent(pair.id)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Approve in local dashboard ↗
+                      </a>
+                    </p>
+                  )}
                   {pair &&
                     info?.mode === "docker" &&
                     base === location.origin && (
@@ -427,15 +462,18 @@ function App() {
                         onSubmit={(e) => {
                           e.preventDefault();
                           action(async () => {
-                            await request(
-                              `/pairings/${pair.id}/approve`,
-                              {
-                                method: "POST",
-                                headers: { "X-Setup-Token": setupToken },
-                              },
-                              "",
-                            );
-                            setupTokenSet("");
+                            try {
+                              await request(
+                                `/pairings/${pair.id}/approve`,
+                                {
+                                  method: "POST",
+                                  headers: { "X-Setup-Token": setupToken },
+                                },
+                                "",
+                              );
+                            } finally {
+                              setupTokenSet("");
+                            }
                           });
                         }}
                       >
@@ -922,4 +960,11 @@ function App() {
     </div>
   );
 }
-createRoot(document.getElementById("root")!).render(<App />);
+const fragment = new URLSearchParams(location.hash.slice(1));
+const approvalId =
+  bundled && fragment.has("approve") ? (fragment.get("approve") ?? "") : null;
+if (approvalId !== null)
+  history.replaceState(null, "", location.pathname + location.search);
+createRoot(document.getElementById("root")!).render(
+  approvalId !== null ? <OperatorApproval id={approvalId} /> : <App />,
+);

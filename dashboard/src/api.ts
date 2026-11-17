@@ -108,7 +108,8 @@ export const bytes = (n: number) =>
     : `${(n / 1024 ** Math.min(4, Math.floor(Math.log(n) / Math.log(1024)))).toFixed(1)} ${["B", "KB", "MB", "GB", "TB"][Math.min(4, Math.floor(Math.log(n) / Math.log(1024)))]}`;
 
 export const client = {
-  info: () => request<CompanionInfo>("/info", {}, ""),
+  info: () =>
+    request<CompanionInfo>("/info", { signal: AbortSignal.timeout(10000) }, ""),
   channels: () => request<Channel[]>("/channels"),
   recordings: () => request<Recording[]>("/recordings"),
   status: () => request<SystemStatus>("/status"),
