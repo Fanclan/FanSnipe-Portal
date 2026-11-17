@@ -47,6 +47,7 @@ import {
   Stat,
   Empty,
   RecordRow,
+  CaptureIssue,
   Modal,
   RecordForm,
   ChannelForm,
@@ -831,6 +832,7 @@ function App() {
                               <small>
                                 {r.platform} · {date(r.startedAt)}
                               </small>
+                              <CaptureIssue recording={r} />
                             </div>
                           </button>
                         ) : (

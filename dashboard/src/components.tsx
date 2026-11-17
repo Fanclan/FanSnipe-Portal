@@ -17,6 +17,7 @@ import {
   request,
   send,
 } from "./api";
+import { failedWithoutMedia, recordingFailure } from "./recording";
 type Any = Record<string, any>;
 const date = (s?: string) => (s ? new Date(s).toLocaleString() : "—");
 const active = (s: string) =>
@@ -55,6 +56,14 @@ export function Empty({ icon, title, text, button }: any) {
     </div>
   );
 }
+export function CaptureIssue({
+  recording,
+}: {
+  recording: Parameters<typeof recordingFailure>[0];
+}) {
+  const failure = recordingFailure(recording);
+  return failure ? <small className="failure-reason">{failure}</small> : null;
+}
 export function RecordRow({ r, open, stop }: any) {
   return (
     <div className="record-row">
@@ -67,6 +76,7 @@ export function RecordRow({ r, open, stop }: any) {
           <small>
             {r.platform} · {date(r.startedAt)}
           </small>
+          <CaptureIssue recording={r} />
         </span>
       </button>
       <span className={"pill " + (r.status === "recording" ? "live" : "")}>
@@ -453,7 +463,7 @@ export function Thumbnail({ r }: any) {
   return (
     <div className="thumbnail">
       {url ? <img src={url} alt="" /> : <Clapperboard size={32} />}
-      <span>▶</span>
+      {!failedWithoutMedia(r) && <span aria-hidden="true">▶</span>}
     </div>
   );
 }
