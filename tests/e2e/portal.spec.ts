@@ -8,9 +8,15 @@ test("public site explains local boundary and offers studio", async ({
     page.getByRole("heading", { name: /Catch the live/ }),
   ).toBeVisible();
   await expect(page.getByText("Your machine.")).toBeVisible();
-  await page.getByRole("link", { name: "Open the studio ↗" }).first().click();
   await expect(
-    page.getByRole("heading", { name: /connect your studio/ }),
+    page.getByRole("link", { name: "Open local studio", exact: true }).first(),
+  ).toHaveAttribute("href", "http://127.0.0.1:47821/app/");
+  await page
+    .getByRole("link", { name: "Use hosted studio", exact: true })
+    .first()
+    .click();
+  await expect(
+    page.getByRole("heading", { name: /open your studio/i }),
   ).toBeVisible();
 });
 test("dashboard pairs and displays real companion data", async ({ page }) => {
@@ -91,7 +97,7 @@ test("marketing page fits narrow mobile screens", async ({ page }) => {
 test("nested dashboard fallback loads its assets", async ({ page }) => {
   await page.goto("/app/example/nested/");
   await expect(
-    page.getByRole("heading", { name: /connect your studio/ }),
+    page.getByRole("heading", { name: /open your studio/i }),
   ).toBeVisible();
 });
 test("indexable pages have distinct metadata and app is excluded from search", async ({
@@ -204,11 +210,9 @@ test("Docker-only bridge release appears separately from native installers", asy
 }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/downloads/");
-  const docker = page
-    .locator("section")
-    .filter({
-      has: page.getByRole("heading", { name: /Version 0\.1\.2-beta\.1/ }),
-    });
+  const docker = page.locator("section").filter({
+    has: page.getByRole("heading", { name: /Version 0\.1\.2-beta\.1/ }),
+  });
   await expect(
     docker.getByText(
       "Docker-only release. macOS and Windows installers remain at 0.1.1-beta.1.",
@@ -249,10 +253,7 @@ test("recording fix lists desktop installers and their separate Docker verificat
   const desktop = source + "/download/desktop-v0.1.3-beta.1/";
   const docker = source + "/download/docker-v0.1.3-beta.1/";
   for (const [label, url] of [
-    [
-      "macOS 13+ · Apple Silicon (DMG) ↗",
-      desktop + "FanSnipe-0.1.3-arm64.dmg",
-    ],
+    ["macOS 13+ · Apple Silicon (DMG) ↗", desktop + "FanSnipe-0.1.3-arm64.dmg"],
     ["macOS 13+ · Intel (DMG) ↗", desktop + "FanSnipe-0.1.3.dmg"],
     ["Windows x64 (EXE) ↗", desktop + "FanSnipe.Setup.0.1.3.exe"],
     ["Release manifest ↗", desktop + "release-manifest.json"],
@@ -271,4 +272,27 @@ test("recording fix lists desktop installers and their separate Docker verificat
   ).toContainText(
     "sha256:9f6828664fac253437152256c656419920a09da7beb55fee59c190d1f2fef9ec",
   );
+});
+
+test("Docker setup guide explains both password mounts and the recording journey", async ({
+  page,
+}) => {
+  await page.goto("/docs/");
+  await expect(
+    page.getByRole("heading", { name: "Docker Desktop" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Docker Compose" }),
+  ).toBeVisible();
+  await expect(
+    page
+      .getByText("/run/secrets/fansnipe_studio_password", { exact: true })
+      .first(),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("heading", { name: "Preview and record" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Open local studio", exact: true }).first(),
+  ).toHaveAttribute("href", "http://127.0.0.1:47821/app/");
 });

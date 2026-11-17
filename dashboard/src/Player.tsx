@@ -2,16 +2,19 @@ import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { ApiError, bytes, mediaUrl, request, send } from "./api";
 import type { Recording } from "@fanclan/fansnipe-protocol";
+import { LivePreview } from "./LivePreview";
 import { failedWithoutMedia, recordingFailure } from "./recording";
 type Ticket = { url: string; expiresAt: string };
 const active = (s: string) =>
   ["queued", "starting", "recording", "stopping", "finalizing"].includes(s);
 export function Player({
   recording: r,
+  livePreview,
   action,
   close,
 }: {
   recording: Recording;
+  livePreview: boolean;
   action: (fn: () => Promise<unknown>) => Promise<void>;
   close: () => void;
 }) {
@@ -187,6 +190,8 @@ export function Player({
               e.currentTarget.play().catch(() => {});
           }}
         />
+      ) : livePreview && r.status === "recording" ? (
+        <LivePreview source={{ recordingId: r.id }} />
       ) : (
         !emptyFailure && (
           <div className="player-empty">

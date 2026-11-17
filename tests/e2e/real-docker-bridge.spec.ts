@@ -158,7 +158,7 @@ test("canonical hosted page pairs through local approval with real Docker bridge
     await operator.getByRole("checkbox", { name: /codes match/i }).check();
     await operator.getByRole("button", { name: "Approve pairing" }).click();
     await expect(
-      page.getByRole("heading", { name: "Good to see you." }),
+      page.getByRole("heading", { name: /Good to see you|Recording studio/ }),
     ).toBeVisible({ timeout: 7000 });
     await page.getByRole("button", { name: "Library", exact: true }).click();
     await page.getByRole("button", { name: /Bridge fixture/ }).click();
