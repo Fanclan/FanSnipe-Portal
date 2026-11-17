@@ -1,5 +1,29 @@
 ---
 import Base from '../layouts/Base.astro';
-import { releases } from '../lib/releases';
+import { releases, releaseStatus } from '../lib/releases';
 ---
-<Base description="Find verified FanSnipe companion releases for your device when they become available, with checksums for each download." title="FanSnipe Downloads — Local Recording Companion"><div class="wrap"><article class="prose"><div class="eyebrow">The companion / Downloads</div><h1>A studio for your device.</h1>{releases.length ? <><p class="lead">Verified releases of the FanSnipe companion.</p>{releases.map(release=><section><h2>Version {release.version}</h2><p>Released {release.date}</p><ul>{release.artifacts.map(artifact=><li><a href={artifact.url}>{artifact.label} ↗</a><br/><small>SHA-256: <code>{artifact.sha256}</code></small></li>)}</ul></section>)}</> : <><p class="lead">The companion is being prepared for macOS, Windows and Docker. Verified release downloads will appear here when available.</p><h2>Release status</h2><p>No verified release assets are published yet. Visit the project repository for source and release updates.</p><p><a href="https://github.com/Fanclan/FanSnipe-Companion">View the companion repository ↗</a></p></>}</article></div></Base>
+<Base description="Find FanSnipe companion releases and checksums, with signing and testing status for each beta." title="FanSnipe Downloads — Local Recording Companion">
+  <div class="wrap"><article class="prose">
+    <div class="eyebrow">The companion / Downloads</div><h1>A studio for your device.</h1>
+    {releases.length ? <>
+      <p class="lead">Published companion releases, with checksums and release-specific status.</p>
+      <p>Checksums help verify that a downloaded file matches the listed artifact. Signing and test status are described separately below.</p>
+      {releases.map(release=><section>
+        <h2>Version {release.version} · {release.stage === 'beta' ? 'Beta' : 'Stable'}</h2><p>Released {release.date} UTC</p>
+        {releaseStatus(release).length>0 && <><h3>Signing and testing</h3><ul>{releaseStatus(release).map(status=><li>{status}</li>)}</ul></>}
+        {release.notes.length>0 && <><h3>Release notes</h3><ul>{release.notes.map(note=><li>{note}</li>)}</ul></>}
+        {release.container && <><h3>Docker image</h3><p>Linux AMD64 and ARM64 image: <code class="checksum">{release.container.reference}</code><br/>OCI image index digest: <code class="checksum">{release.container.digest}</code></p><p>Open the bundled dashboard on the Docker host and published port; the hosted studio connects to a companion on the same device. <a href="/docs/">See setup guidance →</a></p></>}
+        <h3>Downloads</h3><ul>{release.artifacts.map(artifact=><li><a href={artifact.url}>{artifact.label} ↗</a><br/><small>SHA-256: <code class="checksum">{artifact.sha256}</code></small></li>)}</ul>
+        <p>{release.releaseUrl && <a href={release.releaseUrl}>Release notes and source ↗</a>}{release.verificationUrl && <> · <a href={release.verificationUrl}>Release manifest ↗</a></>}{release.checksumsUrl && <> · <a href={release.checksumsUrl}>Published checksums ↗</a></>}</p>
+      </section>)}
+    </> : <>
+      <p class="lead">The companion is being prepared for macOS, Windows and Docker. Release downloads will appear here when their artifacts and status have been checked.</p>
+      <h2>Release status</h2><p>No application release assets are listed yet. Visit the project repository for source and release updates.</p>
+      <p><a href="https://github.com/Fanclan/FanSnipe-Companion">View the companion repository ↗</a></p>
+    </>}
+  </article></div>
+</Base>
+
+<style>
+.checksum { overflow-wrap: anywhere; word-break: break-word; }
+</style>

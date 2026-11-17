@@ -1,5 +1,16 @@
 ---
 import Base from '../layouts/Base.astro';
-import { releases } from '../lib/releases';
+import { releases, releaseStatus } from '../lib/releases';
 ---
-<Base description="Read verified FanSnipe release notes and follow updates to the local stream recorder and dashboard." title="FanSnipe Changelog — Release Notes"><div class="wrap"><article class="prose"><div class="eyebrow">Release notes / Changelog</div><h1>What’s new.</h1>{releases.length ? releases.map(release=><section><h2>Version {release.version}</h2><p>{release.date}</p><ul>{release.notes.map(note=><li>{note}</li>)}</ul></section>) : <><p class="lead">This is where verified release notes will live.</p><h2>Preparing for beta</h2><p>The local companion and redesigned studio are in development. Release notes and downloads will be published after artifacts are verified.</p></>}</article></div></Base>
+<Base description="Read FanSnipe release notes, including signing and testing status for each beta." title="FanSnipe Changelog — Release Notes">
+  <div class="wrap"><article class="prose">
+    <div class="eyebrow">Release notes / Changelog</div><h1>What’s new.</h1>
+    {releases.length ? releases.map(release=><section>
+      <h2>Version {release.version} · {release.stage === 'beta' ? 'Beta' : 'Stable'}</h2><p>{release.date} UTC</p>
+      {releaseStatus(release).length>0 && <><h3>Signing and testing</h3><ul>{releaseStatus(release).map(status=><li>{status}</li>)}</ul></>}
+      {release.notes.length>0 && <><h3>Release notes</h3><ul>{release.notes.map(note=><li>{note}</li>)}</ul></>}
+      {release.releaseUrl && <p><a href={release.releaseUrl}>Full release and verification details ↗</a></p>}
+      <p><a href="/downloads/">View downloads and checksums →</a></p>
+    </section>) : <><p class="lead">This is where release notes will live.</p><h2>Preparing for beta</h2><p>Release notes and downloads will appear after the application artifacts and their status have been checked.</p></>}
+  </article></div>
+</Base>

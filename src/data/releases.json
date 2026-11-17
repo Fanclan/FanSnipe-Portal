@@ -1,1 +1,41 @@
-{"releases":[]}
+{
+  "releases": [
+    {
+      "version": "0.1.1-beta.1",
+      "date": "2026-11-17",
+      "verified": true,
+      "stage": "beta",
+      "signingStatus": "unsigned",
+      "windowsEightHourSoak": "deferred",
+      "notes": [
+        "macOS builds are not notarized.",
+        "Windows x64 CI passed on Windows Server 2025; the eight-hour Windows 11 test is deferred.",
+        "Platform-specific streaming-site compatibility remains unverified."
+      ],
+      "artifacts": [
+        {
+          "label": "macOS 13+ \u00b7 Apple Silicon (DMG)",
+          "url": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/v0.1.1-beta.1/FanSnipe-0.1.1-arm64.dmg",
+          "sha256": "b0022ea0d19f1097a3a9af516946a2c0a25f4cac696f4227fe9937d24cdd4a73"
+        },
+        {
+          "label": "macOS 13+ \u00b7 Intel (DMG)",
+          "url": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/v0.1.1-beta.1/FanSnipe-0.1.1.dmg",
+          "sha256": "b35898920be2f3386b36f6412fedf0f1890ea3f8c35f45a8d3d3c710a692c89b"
+        },
+        {
+          "label": "Windows x64 (EXE)",
+          "url": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/v0.1.1-beta.1/FanSnipe.Setup.0.1.1.exe",
+          "sha256": "ac6c1a90e74402e1b05d8f6028e6b80c3726c2333b65cb216726826addaecd62"
+        }
+      ],
+      "releaseUrl": "https://github.com/Fanclan/FanSnipe-Companion/releases/tag/v0.1.1-beta.1",
+      "verificationUrl": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/v0.1.1-beta.1/release-manifest.json",
+      "checksumsUrl": "https://github.com/Fanclan/FanSnipe-Companion/releases/download/v0.1.1-beta.1/SHA256SUMS.txt",
+      "container": {
+        "reference": "ghcr.io/fanclan/fansnipe:v0.1.1-beta.1",
+        "digest": "sha256:e6aef80707cc2f2549a308ec448aa8aac74195c5bfd9e4f49bb535ecb988a4f8"
+      }
+    }
+  ]
+}

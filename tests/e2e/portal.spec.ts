@@ -169,3 +169,28 @@ test("structured metadata describes each page without adding an application to p
     await expect(page.locator('meta[name="twitter:image:alt"]')).toHaveCount(1);
   }
 });
+test("published beta lists actual artifacts and clearly separates signing, test and OCI status", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/downloads/");
+  await expect(page.getByText("This release is unsigned.")).toBeVisible();
+  await expect(
+    page.getByText("The eight-hour Windows test has been deferred."),
+  ).toBeVisible();
+  await expect(page.getByText("macOS builds are not notarized.")).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Windows x64 (EXE) ↗" }),
+  ).toHaveAttribute("href", /FanSnipe\.Setup\.0\.1\.1\.exe$/);
+  await expect(
+    page.getByRole("link", { name: "Published checksums ↗" }),
+  ).toHaveAttribute("href", /SHA256SUMS\.txt$/);
+  await expect(
+    page.getByText("OCI image index digest:", { exact: false }),
+  ).toContainText(
+    "sha256:e6aef80707cc2f2549a308ec448aa8aac74195c5bfd9e4f49bb535ecb988a4f8",
+  );
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+});
