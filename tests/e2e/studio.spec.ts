@@ -44,7 +44,13 @@ const settings = {
   hasS3Credentials: false,
   lockedFields: ["recordingsPath"],
 };
-async function fixture(page: Page, overrides: { revoked?: boolean } = {}) {
+async function fixture(
+  page: Page,
+  overrides: {
+    revoked?: boolean;
+    recordings?: (typeof recording & { error?: string })[];
+  } = {},
+) {
   const requests: { path: string; body: any; method: string }[] = [];
   await page.addInitScript(() =>
     localStorage.setItem("streamsnipe.token.v1", "saved-token"),
@@ -94,7 +100,8 @@ async function fixture(page: Page, overrides: { revoked?: boolean } = {}) {
         stats: { totalRecordings: 1, totalDuration: 60, totalSize: 1024 },
       };
     else if (path.endsWith("/channels")) data = [channel];
-    else if (path.endsWith("/recordings")) data = [recording];
+    else if (path.endsWith("/recordings"))
+      data = overrides.recordings ?? [recording];
     else if (path.endsWith("/status"))
       data = {
         activeRecordings: 0,
@@ -126,6 +133,53 @@ async function fixture(page: Page, overrides: { revoked?: boolean } = {}) {
   });
   return requests;
 }
+test("failed empty captures explain what happened before opening the player", async ({
+  page,
+}) => {
+  const reason = "This channel is offline. Try again when it is live.";
+  const failed = {
+    ...recording,
+    channelId: "",
+    id: "failed-room",
+    title: "Public room",
+    status: "failed",
+    platform: "chaturbate",
+    fileSize: 0,
+    hasPreview: false,
+    hasThumbnail: false,
+    error: reason,
+  };
+  const requests = await fixture(page, {
+    recordings: [
+      failed,
+      {
+        ...failed,
+        id: "old-record",
+        title: "Older capture",
+        error: "Recording produced no media",
+      },
+    ],
+  });
+  await page.goto("/app/");
+  await expect(page.getByRole("button", { name: /Public room/ })).toContainText(
+    reason,
+  );
+  await expect(
+    page.getByRole("button", { name: /Older capture/ }),
+  ).toContainText("Check that the stream is public and live");
+  await page.getByRole("button", { name: "Library", exact: true }).click();
+  const entry = page.getByRole("button", { name: /Public room/ });
+  await expect(entry).toContainText(reason);
+  await page.getByRole("button", { name: "List view" }).click();
+  await expect(entry).toContainText(reason);
+  await entry.click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog).toContainText(reason);
+  await expect(dialog.getByRole("button", { name: "Download" })).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: /upload/i })).toHaveCount(0);
+  await expect(dialog.getByRole("button", { name: "Delete" })).toBeVisible();
+  expect(requests.some((r) => r.path.endsWith("/media-ticket"))).toBe(false);
+});
 test("revoked token returns to pairing and removes cached credential", async ({
   page,
 }) => {

@@ -536,6 +536,12 @@ input[type="checkbox"] {
 .record-body {
   padding: 18px;
 }
+.failure-reason {
+  display: block;
+  margin-top: 6px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
 .record-body h3 {
   font-size: 15px;
   margin: 13px 0 6px;

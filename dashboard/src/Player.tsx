@@ -1,17 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Download, Trash2 } from "lucide-react";
 import { ApiError, bytes, mediaUrl, request, send } from "./api";
-type Recording = {
-  id: string;
-  title: string;
-  status: string;
-  startedAt: string;
-  fileSize: number;
-  hasPreview: boolean;
-  uploadedToCloud: boolean;
-  uploadState?: "uploading" | "completed" | "failed" | "cancelled";
-  uploadProgress?: number;
-};
+import type { Recording } from "@fanclan/fansnipe-protocol";
+import { failedWithoutMedia, recordingFailure } from "./recording";
 type Ticket = { url: string; expiresAt: string };
 const active = (s: string) =>
   ["queued", "starting", "recording", "stopping", "finalizing"].includes(s);
@@ -24,6 +15,8 @@ export function Player({
   action: (fn: () => Promise<unknown>) => Promise<void>;
   close: () => void;
 }) {
+  const emptyFailure = failedWithoutMedia(r);
+  const failure = recordingFailure(r);
   const [ticket, setTicket] = useState<Ticket | null>(null),
     [preview, setPreview] = useState(""),
     [showPreview, setShowPreview] = useState(false),
@@ -96,8 +89,8 @@ export function Player({
     };
   }, []);
   useEffect(() => {
-    if (!active(r.status)) renew();
-  }, [renew, r.status]);
+    if (!emptyFailure && !active(r.status)) renew();
+  }, [renew, r.status, emptyFailure]);
   useEffect(() => {
     if (!ticket || terminal) return;
     const t = setTimeout(
@@ -152,6 +145,7 @@ export function Player({
   }
   return (
     <div>
+      {failure && <p className="alert">{failure}</p>}
       {message && (
         <p className="alert" role="status">
           {message}
@@ -194,13 +188,15 @@ export function Player({
           }}
         />
       ) : (
-        <div className="player-empty">
-          {active(r.status)
-            ? "Recording in progress."
-            : terminal
-              ? "Playback unavailable."
-              : "Checking for available media…"}
-        </div>
+        !emptyFailure && (
+          <div className="player-empty">
+            {active(r.status)
+              ? "Recording in progress."
+              : terminal
+                ? "Playback unavailable."
+                : "Checking for available media…"}
+          </div>
+        )
       )}
       <div className="player-meta">
         <span className="pill">{r.status}</span>
@@ -226,7 +222,7 @@ export function Player({
             {showPreview ? "Full recording" : "Preview frame"}
           </button>
         )}
-        {!active(r.status) && (
+        {!active(r.status) && !emptyFailure && (
           <button className="secondary" onClick={download}>
             <Download size={15} /> Download
           </button>
@@ -239,7 +235,7 @@ export function Player({
             Stop recording
           </button>
         )}
-        {!active(r.status) && (
+        {!active(r.status) && !emptyFailure && (
           <button
             className="secondary"
             disabled={
