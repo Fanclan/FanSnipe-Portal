@@ -174,22 +174,62 @@ test("published beta lists actual artifacts and clearly separates signing, test 
 }) => {
   await page.setViewportSize({ width: 320, height: 844 });
   await page.goto("/downloads/");
-  await expect(page.getByText("This release is unsigned.")).toBeVisible();
+  const desktop = page.locator("section").filter({
+    has: page.getByRole("heading", { name: /Version 0\.1\.1-beta\.1/ }),
+  });
+  await expect(desktop.getByText("This release is unsigned.")).toBeVisible();
   await expect(
-    page.getByText("The eight-hour Windows test has been deferred."),
+    desktop.getByText("The eight-hour Windows test has been deferred."),
   ).toBeVisible();
-  await expect(page.getByText("macOS builds are not notarized.")).toBeVisible();
   await expect(
-    page.getByRole("link", { name: "Windows x64 (EXE) ↗" }),
+    desktop.getByText("macOS builds are not notarized."),
+  ).toBeVisible();
+  await expect(
+    desktop.getByRole("link", { name: "Windows x64 (EXE) ↗" }),
   ).toHaveAttribute("href", /FanSnipe\.Setup\.0\.1\.1\.exe$/);
   await expect(
-    page.getByRole("link", { name: "Published checksums ↗" }),
+    desktop.getByRole("link", { name: "Published checksums ↗" }),
   ).toHaveAttribute("href", /SHA256SUMS\.txt$/);
   await expect(
-    page.getByText("OCI image index digest:", { exact: false }),
+    desktop.getByText("OCI image index digest:", { exact: false }),
   ).toContainText(
     "sha256:e6aef80707cc2f2549a308ec448aa8aac74195c5bfd9e4f49bb535ecb988a4f8",
   );
+  expect(
+    await page.evaluate(() => document.documentElement.scrollWidth),
+  ).toBeLessThanOrEqual(320);
+});
+test("Docker-only bridge release appears separately from native installers", async ({
+  page,
+}) => {
+  await page.setViewportSize({ width: 320, height: 844 });
+  await page.goto("/downloads/");
+  const docker = page
+    .locator("section")
+    .filter({
+      has: page.getByRole("heading", { name: /Version 0\.1\.2-beta\.1/ }),
+    });
+  await expect(
+    docker.getByText(
+      "Docker-only release. macOS and Windows installers remain at 0.1.1-beta.1.",
+    ),
+  ).toBeVisible();
+  await expect(
+    docker.getByText("The eight-hour Windows test has been deferred."),
+  ).toBeVisible();
+  await expect(
+    docker.getByRole("link", {
+      name: "Docker release verification manifest (JSON) ↗",
+    }),
+  ).toHaveAttribute("href", /docker-v0\.1\.2-beta\.1\/release-manifest\.json$/);
+  await expect(
+    docker.getByText("OCI image index digest:", { exact: false }),
+  ).toContainText(
+    "sha256:3bcd0c443a04ec8e003eaae34fda9e93d74b083a5f5f6e537810b113fe907e6c",
+  );
+  await expect(
+    page.getByRole("link", { name: "Windows x64 (EXE) ↗" }),
+  ).toHaveAttribute("href", /v0\.1\.1-beta\.1\/FanSnipe\.Setup\.0\.1\.1\.exe$/);
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
   ).toBeLessThanOrEqual(320);

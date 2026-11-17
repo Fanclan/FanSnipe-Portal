@@ -30,6 +30,29 @@ test.beforeAll(async () => {
     JSON.stringify({
       releases: [
         {
+          version: "0.1.2-beta.1",
+          date: "2026-11-17",
+          verified: true,
+          stage: "beta",
+          signingStatus: "unsigned",
+          windowsEightHourSoak: "deferred",
+          notes: [
+            "Docker-only update; desktop installers remain at 0.1.1.",
+            "Enable the bridge with FANSNIPE_HOSTED_DASHBOARD=true on the same device.",
+          ],
+          artifacts: [
+            {
+              label: "Docker release verification manifest (JSON)",
+              url: "https://example.test/release-manifest.json",
+              sha256: "c".repeat(64),
+            },
+          ],
+          container: {
+            reference: "ghcr.io/example/fansnipe:v0.1.2-beta.1",
+            digest: `sha256:${"b".repeat(64)}`,
+          },
+        },
+        {
           version: "0.1.1-beta.1",
           date: "2026-11-16",
           verified: true,
@@ -102,12 +125,46 @@ test("populated beta release remains readable at narrow widths", async ({
   for (const width of [320, 375, 390]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto(origin + "/downloads/");
-    await expect(page.getByText("This release is unsigned.")).toBeVisible();
+    const docker = page.locator("section").filter({
+      has: page.getByRole("heading", { name: /Version 0\.1\.2-beta\.1/ }),
+    });
+    const desktop = page.locator("section").filter({
+      has: page.getByRole("heading", { name: /Version 0\.1\.1-beta\.1/ }),
+    });
+    await expect(docker.getByText("This release is unsigned.")).toBeVisible();
     await expect(
-      page.getByText("The eight-hour Windows test has been deferred."),
+      docker.getByText("The eight-hour Windows test has been deferred."),
     ).toBeVisible();
-    await expect(page.getByText("Synthetic release note")).toBeVisible();
-    await expect(page.locator("code.checksum")).toHaveText("a".repeat(64));
+    await expect(
+      docker.getByText(
+        "Docker-only update; desktop installers remain at 0.1.1.",
+      ),
+    ).toBeVisible();
+    await expect(
+      docker.getByRole("link", {
+        name: /Docker release verification manifest/,
+      }),
+    ).toBeVisible();
+    await expect(
+      docker.getByText("OCI image index digest:", { exact: false }),
+    ).toContainText("sha256:" + "b".repeat(64));
+    await expect(desktop.getByText("Synthetic release note")).toBeVisible();
+    await expect(desktop.locator("code.checksum")).toHaveText("a".repeat(64));
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth),
+    ).toBeLessThanOrEqual(width);
+    await page.goto(origin + "/changelog/");
+    const dockerNotes = page.locator("section").filter({
+      has: page.getByRole("heading", { name: /Version 0\.1\.2-beta\.1/ }),
+    });
+    await expect(
+      dockerNotes.getByText(
+        "Docker-only update; desktop installers remain at 0.1.1.",
+      ),
+    ).toBeVisible();
+    await expect(
+      dockerNotes.getByText("The eight-hour Windows test has been deferred."),
+    ).toBeVisible();
     expect(
       await page.evaluate(() => document.documentElement.scrollWidth),
     ).toBeLessThanOrEqual(width);

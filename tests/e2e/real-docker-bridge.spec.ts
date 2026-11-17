@@ -182,6 +182,28 @@ test("canonical hosted page pairs through local approval with real Docker bridge
           (video: HTMLVideoElement) => new URL(video.currentSrc).origin,
         ),
     ).toBe(local);
+    await page.locator("video").evaluate(async (video: HTMLVideoElement) => {
+      video.muted = true;
+      await video.play();
+    });
+    await expect
+      .poll(() =>
+        page
+          .locator("video")
+          .evaluate((video: HTMLVideoElement) => video.currentTime),
+      )
+      .toBeGreaterThan(0.25);
+    await page.locator("video").evaluate((video: HTMLVideoElement) => {
+      video.pause();
+      video.currentTime = 1;
+    });
+    await expect
+      .poll(() =>
+        page
+          .locator("video")
+          .evaluate((video: HTMLVideoElement) => video.currentTime),
+      )
+      .toBeGreaterThan(0.9);
     expect(
       observed.some(
         (req) =>
