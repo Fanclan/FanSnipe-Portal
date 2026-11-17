@@ -793,18 +793,25 @@ pre {
     width: 70px;
     padding: 24px 10px;
   }
-  .brand > span:not(.logo),
-  .side-label,
+  .app:not(.locked) .brand > span:not(.logo),
+  .app:not(.locked) .side-label,
   .sidebar nav button .arrow,
-  .sidebar nav button {
-    font-size: 0;
+  .sidebar nav button span {
+    display: none;
+  }
+  .sidebar nav {
+    margin-top: 40px;
+    min-width: 0;
   }
   .sidebar nav button {
+    width: 100%;
+    min-width: 0;
     justify-content: center;
-    padding: 14px;
+    padding: 14px 0;
   }
-  .sidebar > .side-label {
-    margin: 40px 0 10px;
+  .app:not(.locked) .brand {
+    justify-content: center;
+    padding: 0;
   }
   .connection div,
   .sidebottom > a {
@@ -828,6 +835,43 @@ pre {
   }
 }
 @media (max-width: 600px) {
+  .app:not(.locked) .sidebar {
+    position: fixed;
+    inset: auto 0 0;
+    width: auto;
+    height: auto;
+    z-index: 5;
+    padding: 5px 8px max(5px, env(safe-area-inset-bottom));
+    border: 0;
+    border-top: 1px solid var(--line);
+    background: var(--side);
+  }
+  .app:not(.locked) .sidebar .brand,
+  .app:not(.locked) .sidebottom {
+    display: none;
+  }
+  .sidebar nav {
+    margin: 0;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .sidebar nav button {
+    display: flex;
+    flex-direction: column;
+    min-height: 48px;
+    gap: 4px;
+    padding: 5px;
+    border-radius: 6px;
+    font-size: 10px;
+  }
+  .sidebar nav button span {
+    display: block;
+  }
+  .main {
+    width: 100%;
+    margin-left: 0;
+  }
   .content {
     padding: 35px 20px 80px;
   }
@@ -903,4 +947,396 @@ pre {
 }
 .modal:focus {
   outline: none;
+}
+
+/* The home screen follows one stream from inspection through capture. */
+.studio-journey {
+  max-width: 1020px;
+  margin: 0 auto;
+  min-width: 0;
+}
+.journey-header,
+.capture-card > header,
+.journey-recent > header,
+.source-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.journey-header {
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+.journey-header h1,
+.studio-access h1 {
+  font-size: clamp(32px, 4vw, 52px);
+  font-weight: 650;
+  letter-spacing: -0.055em;
+  line-height: 1.08;
+  margin: 0;
+}
+.journey-header > span,
+.capture-readings,
+.source-byline,
+.access-alternate p,
+.source-help,
+.source-message,
+.studio-access > p,
+.access-identity p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.journey-header > span,
+.journey-recent .link,
+.capture-controls .link,
+.source-status,
+.record-options summary,
+.live-monitor header span,
+.capture-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.source-panel,
+.capture-card {
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--panel);
+  padding: clamp(18px, 3vw, 32px);
+}
+.source-panel {
+  border-top: 2px solid var(--accent);
+}
+.source-label {
+  font-size: 20px;
+  letter-spacing: -0.035em;
+  font-weight: 650;
+  margin-bottom: 14px;
+  display: block;
+}
+.source-input {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  padding-left: 14px;
+  color: var(--muted);
+}
+.source-input:focus-within {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+.source-input input {
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-size: 16px;
+  font-weight: 400;
+  min-width: 0;
+  padding: 15px 12px 15px 0;
+}
+.source-input svg {
+  flex: none;
+}
+.source-help,
+.source-message {
+  margin: 12px 0 0;
+}
+.source-result {
+  margin-top: 22px;
+  border-top: 1px solid var(--line);
+  padding-top: 20px;
+  overflow-wrap: anywhere;
+}
+.source-byline {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.source-status,
+.capture-state {
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 4px 9px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.source-status.onair {
+  color: var(--accent);
+}
+.source-title {
+  justify-content: flex-start;
+  margin: 12px 0;
+}
+.source-title h2,
+.capture-card h2 {
+  font-size: clamp(20px, 2.5vw, 29px);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  overflow-wrap: anywhere;
+  line-height: 1.2;
+  margin: 0;
+}
+.record-options {
+  margin: 14px 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.record-options summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 5px 0;
+}
+.record-options summary::-webkit-details-marker {
+  display: none;
+}
+.record-options summary:after {
+  content: "+";
+  font-size: 16px;
+}
+.record-options[open] summary:after {
+  content: "−";
+}
+.record-options .form-grid {
+  max-width: 490px;
+  gap: 14px;
+  margin-top: 12px;
+}
+.source-actions,
+.capture-controls,
+.access-alternate {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.capture-controls,
+.source-actions {
+  margin-top: 16px;
+}
+.live-view {
+  min-width: 0;
+}
+.live-view:has(.live-monitor) {
+  flex: 1 0 100%;
+}
+.live-monitor {
+  padding: 10px;
+  background: #111719;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: #e5f2ef;
+}
+.live-monitor header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 650;
+  margin-bottom: 7px;
+}
+.live-monitor video {
+  display: block;
+  aspect-ratio: 16/9;
+  object-fit: contain;
+}
+.live-monitor small {
+  display: block;
+  padding: 8px;
+}
+.live-led {
+  height: 7px;
+  width: 7px;
+  border-radius: 50%;
+  background: #98ddbd;
+}
+.capture-card {
+  margin-top: 18px;
+}
+.capture-card h2 {
+  margin: 15px 0 6px;
+}
+.capture-card > header small,
+.journey-row small,
+.journey-status {
+  color: var(--muted);
+  font-size: 12px;
+}
+.capture-state.capturing svg {
+  fill: currentColor;
+  color: var(--danger);
+}
+.capture-readings {
+  display: flex;
+  gap: 20px;
+  font-variant-numeric: tabular-nums;
+}
+.capture-controls {
+  align-items: center;
+}
+.journey-recent {
+  margin-top: 38px;
+}
+.journey-recent h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+}
+.journey-recent > header {
+  padding-bottom: 16px;
+}
+.journey-row {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 13px 0;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  text-align: left;
+}
+.journey-row > span:nth-child(2) {
+  min-width: 0;
+  flex: 1;
+}
+.journey-row strong,
+.journey-row small {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.journey-row small {
+  margin-top: 4px;
+}
+.journey-row:hover strong,
+.journey-recent .link:hover {
+  text-decoration: underline;
+}
+.journey-status {
+  text-transform: capitalize;
+}
+.locked {
+  display: block;
+}
+.locked .sidebar {
+  position: static;
+  display: flex;
+  width: auto;
+  flex-direction: row;
+  align-items: center;
+  height: 72px;
+  padding: 0 5%;
+  background: var(--bg);
+  border: 0;
+}
+.locked .brand > span:not(.logo) {
+  display: block;
+  font-size: 19px;
+}
+.locked .brand small {
+  display: block;
+}
+.locked .sidebottom,
+.locked .top {
+  display: none;
+}
+.locked .main {
+  width: 100%;
+  margin: 0;
+  border-top: 1px solid var(--line);
+}
+.locked .content {
+  max-width: 780px;
+  padding: clamp(32px, 8vh, 84px) clamp(20px, 5vw, 64px);
+}
+.studio-access {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: clamp(22px, 5vw, 44px);
+}
+.access-symbol {
+  display: inline-grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  background: var(--panel2);
+  color: var(--accent);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 20px;
+}
+.access-identity p {
+  max-width: 47ch;
+  margin: 14px 0 22px;
+}
+.unlock-form {
+  display: grid;
+  gap: 12px;
+}
+.unlock-form label {
+  margin: 0;
+}
+.unlock-form button {
+  justify-self: start;
+}
+.access-alternate {
+  margin: 24px 0 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+  align-items: center;
+}
+.access-alternate:empty {
+  margin: 16px 0;
+  padding: 0;
+  border: none;
+}
+.access-alternate h2,
+.access-alternate p,
+.access-alternate form,
+.access-alternate .pair-code {
+  width: 100%;
+  margin: 0;
+}
+.access-alternate h2 {
+  font-size: 16px;
+}
+.access-alternate p {
+  margin-bottom: 4px;
+}
+.studio-access .help,
+.compatibility-note a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.compatibility-note {
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 18px;
+}
+@media (max-width: 540px) {
+  .capture-card,
+  .source-panel {
+    padding: 16px;
+  }
+  .journey-recent .row-icon,
+  .journey-row > svg {
+    display: none;
+  }
+  .journey-header {
+    gap: 8px;
+  }
+  .journey-header h1 {
+    width: 100%;
+  }
+  .journey-row {
+    gap: 8px;
+  }
 }

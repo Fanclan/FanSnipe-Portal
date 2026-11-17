@@ -187,7 +187,7 @@ test("revoked token returns to pairing and removes cached credential", async ({
   await page.goto("/app/");
   await expect(page.getByText(/expired or was revoked/)).toBeVisible();
   await expect(
-    page.getByRole("heading", { name: /connect your studio/ }),
+    page.getByRole("heading", { name: /open your studio/i }),
   ).toBeVisible();
   expect(
     await page.evaluate(() => localStorage.getItem("streamsnipe.token.v1")),

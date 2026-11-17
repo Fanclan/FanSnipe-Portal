@@ -1,5 +1,6 @@
 import type {
   Channel,
+  CompanionInfo,
   Recording,
   Settings,
   SystemStatus,
@@ -20,16 +21,13 @@ import {
   HardDrive,
   LayoutDashboard,
   List,
-  Monitor,
   Plus,
   Radio,
-  RefreshCw,
   Settings as SettingsIcon,
   SunMoon,
 } from "lucide-react";
 import {
   ApiError,
-  base,
   bundled,
   bytes,
   client,
@@ -40,6 +38,8 @@ import {
   send,
   setToken,
 } from "./api";
+import { StudioAccess } from "./StudioAccess";
+import { RecordingStudio } from "./RecordingStudio";
 import { Player } from "./Player";
 import { OperatorApproval } from "./OperatorApproval";
 import {
@@ -63,8 +63,10 @@ function App() {
       localStorage.getItem("ss-theme") || "dark",
     ),
     [token, tokenState] = useState(getToken()),
-    [info, infoSet] = useState<Any | null>(null),
-    [connect, connectSet] = useState("Checking companion…"),
+    [info, infoSet] = useState<CompanionInfo | null>(null),
+    [connect, connectSet] = useState(
+      bundled ? "Checking companion…" : "Local studio",
+    ),
     [pair, pairSet] = useState<PairingChallenge | null>(null),
     [error, errorSet] = useState(""),
     [page, pageSet] = useState("Overview"),
@@ -84,8 +86,7 @@ function App() {
     [channelFilter, channelFilterSet] = useState("all"),
     [dateFrom, dateFromSet] = useState(""),
     [dateTo, dateToSet] = useState(""),
-    [sort, sortSet] = useState("newest"),
-    [setupToken, setupTokenSet] = useState("");
+    [sort, sortSet] = useState("newest");
   const pendingRefresh = useRef<Promise<void> | null>(null);
   const refreshAgain = useRef(false);
   const epoch = useRef(0);
@@ -132,9 +133,13 @@ function App() {
     try {
       const i = await client.info();
       infoSet(i);
-      connectSet(i.protocolVersion === 1 ? "Connected" : "Version mismatch");
+      connectSet(
+        i.protocolVersion === 1 ? "Companion found" : "Version mismatch",
+      );
+      return i;
     } catch {
       infoSet(null);
+      statusSet(null);
       connectSet("Companion offline or local network access blocked");
     }
   }, []);
@@ -162,8 +167,10 @@ function App() {
           if (
             epoch.current === currentEpoch &&
             !(e instanceof ApiError && e.status === 401)
-          )
+          ) {
+            statusSet(null);
             errorSet(e.message);
+          }
         }
       } while (
         refreshAgain.current &&
@@ -178,10 +185,11 @@ function App() {
     return pending;
   }, [token]);
   useEffect(() => {
+    if (!bundled && !token) return;
     probe();
     const t = setInterval(probe, 15000);
     return () => clearInterval(t);
-  }, [probe]);
+  }, [probe, token]);
   useEffect(() => {
     if (!token) return;
     refresh();
@@ -207,9 +215,6 @@ function App() {
         .catch((e) => errorSet(e.message));
     }
   }, [page, token]);
-  useEffect(() => {
-    if (!pair) setupTokenSet("");
-  }, [pair]);
   useEffect(() => {
     if (!pair) return;
     let stop = false;
@@ -259,15 +264,17 @@ function App() {
     }
   }
   const beginPair = () =>
-    action(async () =>
+    action(async () => {
+      const found = info || (await probe());
+      if (!found || found.protocolVersion !== 1) return;
       pairSet(
         await send("/pairings", {
           name: navigator.userAgent.includes("Chrome")
             ? "Chrome browser"
             : "Browser",
         }),
-      ),
-    );
+      );
+    });
   const filtered = recordings
     .filter(
       (r) =>
@@ -288,9 +295,13 @@ function App() {
           : Date.parse(b.startedAt) - Date.parse(a.startedAt),
     );
   return (
-    <div className="app">
+    <div className={token ? "app" : "app locked"}>
       <aside className="sidebar">
-        <a className="brand" href={bundled ? "/app/" : "/"}>
+        <a
+          className="brand"
+          title="FanSnipe recording studio"
+          href={bundled ? "/app/" : "/"}
+        >
           <span className="logo">
             <AudioLines size={20} />
           </span>
@@ -298,28 +309,34 @@ function App() {
             FanSnipe<small>RECORDING STUDIO</small>
           </span>
         </a>
-        <div className="side-label">WORKSPACE</div>
-        <nav>
-          {[
-            [LayoutDashboard, "Overview"],
-            [Radio, "Channels"],
-            [Archive, "Library"],
-            [SettingsIcon, "Settings"],
-          ].map(([Icon, label]: any) => (
-            <button
-              key={label}
-              onClick={() => {
-                pageSet(label);
-                selectedSet(null);
-              }}
-              className={page === label ? "selected" : ""}
-            >
-              <Icon size={18} />
-              {label}
-              <ChevronRight size={14} className="arrow" />
-            </button>
-          ))}
-        </nav>
+        {token && (
+          <>
+            <div className="side-label">WORKSPACE</div>
+            <nav>
+              {[
+                [LayoutDashboard, "Overview"],
+                [Radio, "Channels"],
+                [Archive, "Library"],
+                [SettingsIcon, "Settings"],
+              ].map(([Icon, label]: any) => (
+                <button
+                  key={label}
+                  aria-label={label}
+                  aria-current={page === label ? "page" : undefined}
+                  onClick={() => {
+                    pageSet(label);
+                    selectedSet(null);
+                  }}
+                  className={page === label ? "selected" : ""}
+                >
+                  <Icon size={18} />
+                  <span>{label}</span>
+                  <ChevronRight size={14} className="arrow" />
+                </button>
+              ))}
+            </nav>
+          </>
+        )}
         <div className="sidebottom">
           <div className="side-label">YOUR COMPANION</div>
           <div className="connection">
@@ -329,7 +346,13 @@ function App() {
               }
             />
             <div>
-              <b>{info ? "Companion detected" : "Not connected"}</b>
+              <b>
+                {info && status
+                  ? "Connected"
+                  : info
+                    ? "Companion detected"
+                    : "Not connected"}
+              </b>
               <small>
                 {info
                   ? `v${info.version} · ${info.mode}`
@@ -359,7 +382,7 @@ function App() {
                   "dot " + (info && info.protocolVersion === 1 ? "online" : "")
                 }
               />
-              {connect}
+              {info && status && token ? "Connected" : connect}
             </span>
             <button
               className="iconbtn"
@@ -380,219 +403,146 @@ function App() {
             </div>
           )}
           {!token ? (
-            <div className="pair-page">
-              <div className="eyebrow">YOUR SPACE, YOUR DEVICE</div>
-              <h1>
-                Let’s connect
-                <br />
-                your studio.
-              </h1>
-              <p>
-                Pair this browser with your local FanSnipe companion to access
-                your channels and recordings.
-              </p>
-              <div className="pair-card">
-                <div className="pair-icon">
-                  <Monitor size={24} />
-                </div>
-                <div>
-                  <h3>{connect}</h3>
-                  <p>
-                    {info
-                      ? "Your companion is ready to pair. Approve the request in its local interface."
-                      : "Start the companion and allow your browser to access local network devices, then try again."}
-                  </p>
-                  {!info && !bundled && (
-                    <p>
-                      Using Docker? Open the{" "}
-                      <a
-                        href={`${base}/app/`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        local Docker dashboard ↗
-                      </a>
-                      . A supported Docker build can optionally enable the
-                      same-device bridge with{" "}
-                      <code>FANSNIPE_HOSTED_DASHBOARD=true</code>; use{" "}
-                      <a href="https://fansnipe.com/app/">fansnipe.com/app/</a>{" "}
-                      and keep the port bound to loopback. This connection may
-                      also be blocked by browser permissions or an offline
-                      companion. <a href={docsUrl}>Setup guidance ↗</a>
-                    </p>
-                  )}
-                  {info && info.protocolVersion !== 1 && (
-                    <p>
-                      This studio requires protocol version 1. Update your
-                      companion.
-                    </p>
-                  )}
-                  {pair ? (
-                    <div className="pair-code">
-                      <small>CONFIRM THIS CODE IN THE COMPANION</small>
-                      <strong>{pair.code}</strong>
-                      <span>
-                        Waiting for approval · expires {date(pair.expiresAt)}
-                      </span>
-                    </div>
-                  ) : (
-                    <button
-                      className="primary"
-                      disabled={!info || info.protocolVersion !== 1}
-                      onClick={beginPair}
-                    >
-                      Pair this browser <ChevronRight size={16} />
-                    </button>
-                  )}
-                  {pair && info?.mode === "docker" && !bundled && (
-                    <p>
-                      <a
-                        className="secondary"
-                        href={`${base}/app/#approve=${encodeURIComponent(pair.id)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Approve in local dashboard ↗
-                      </a>
-                    </p>
-                  )}
-                  {pair &&
-                    info?.mode === "docker" &&
-                    base === location.origin && (
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault();
-                          action(async () => {
-                            try {
-                              await request(
-                                `/pairings/${pair.id}/approve`,
-                                {
-                                  method: "POST",
-                                  headers: { "X-Setup-Token": setupToken },
-                                },
-                                "",
-                              );
-                            } finally {
-                              setupTokenSet("");
-                            }
-                          });
-                        }}
-                      >
-                        <label>
-                          Docker setup token
-                          <input
-                            type="password"
-                            required
-                            value={setupToken}
-                            onChange={(e) => setupTokenSet(e.target.value)}
-                          />
-                        </label>
-                        <button className="secondary">Approve pairing</button>
-                      </form>
-                    )}
-                  <button className="secondary" onClick={probe}>
-                    <RefreshCw size={15} /> Check again
-                  </button>
-                </div>
-              </div>
-              <a
-                className="help"
-                href={docsUrl}
-                target={bundled ? "_blank" : undefined}
-                rel={bundled ? "noopener noreferrer" : undefined}
-              >
-                Need a hand? Read the setup guide ↗
-              </a>
-            </div>
+            <StudioAccess
+              info={info}
+              connect={connect}
+              pair={pair}
+              begin={beginPair}
+              probe={() => {
+                errorSet("");
+                return probe();
+              }}
+              unlocked={(value) => {
+                setToken(value);
+                tokenState(value);
+              }}
+              action={action}
+            />
           ) : (
             <>
-              {page === "Overview" && (
-                <>
-                  <PageTitle
-                    eyebrow="YOUR STUDIO AT A GLANCE"
-                    title="Good to see you."
-                    desc="Everything happening in your recording studio."
-                    action={
-                      <button
-                        className="primary"
-                        onClick={() => modalSet("record")}
-                      >
-                        <Plus size={16} /> New recording
-                      </button>
-                    }
-                  />
-                  <div className="stats">
-                    <Stat
-                      icon={<Activity />}
-                      label="ACTIVE RECORDINGS"
-                      value={status?.activeRecordings ?? "—"}
-                      note="Currently capturing"
-                    />
-                    <Stat
-                      icon={<Archive />}
-                      label="TOTAL RECORDINGS"
-                      value={status?.totalRecordings ?? "—"}
-                      note="In your library"
-                    />
-                    <Stat
-                      icon={<Radio />}
-                      label="CHANNELS"
-                      value={status?.totalChannels ?? "—"}
-                      note="Saved to your studio"
-                    />
-                    <Stat
-                      icon={<HardDrive />}
-                      label="DISK AVAILABLE"
-                      value={status?.disk ? bytes(status.disk.available) : "—"}
-                      note={
-                        status?.disk
-                          ? `${status.disk.usedPercent.toFixed(0)}% used`
-                          : "On this device"
-                      }
-                    />
-                  </div>
-                  <div className="sectionhead">
-                    <div>
-                      <div className="eyebrow">RECENT ACTIVITY</div>
-                      <h2>Your recordings</h2>
-                    </div>
-                    <button className="link" onClick={() => pageSet("Library")}>
-                      View library →
-                    </button>
-                  </div>
-                  {recordings.length ? (
-                    <div className="record-list">
-                      {recordings.slice(0, 5).map((r) => (
-                        <RecordRow
-                          key={r.id}
-                          r={r}
-                          open={() => {
-                            playerIdSet(r.id);
-                            modalSet("player");
-                          }}
-                          stop={() =>
-                            action(() => send(`/recordings/${r.id}/stop`, {}))
-                          }
-                        />
-                      ))}
-                    </div>
-                  ) : (
-                    <Empty
-                      icon={<Clapperboard />}
-                      title="Your first recording starts here"
-                      text="Start a recording from a stream URL, or add a channel to capture it automatically."
-                      button={
+              {page === "Overview" && info?.capabilities?.sourceInspection && (
+                <RecordingStudio
+                  records={recordings}
+                  channels={channels}
+                  canPreview={!!info.capabilities.livePreview}
+                  refresh={refresh}
+                  library={() => pageSet("Library")}
+                  play={(id) => {
+                    playerIdSet(id);
+                    modalSet("player");
+                  }}
+                  available={status?.disk?.available}
+                />
+              )}
+              {page === "Overview" && !info && <p role="status">{connect}</p>}
+              {page === "Overview" &&
+                info &&
+                !info.capabilities?.sourceInspection && (
+                  <>
+                    <PageTitle
+                      eyebrow="YOUR STUDIO AT A GLANCE"
+                      title="Good to see you."
+                      desc="Everything happening in your recording studio."
+                      action={
                         <button
-                          className="secondary"
-                          onClick={() => modalSet("record")}
+                          className="primary"
+                          onClick={() =>
+                            info?.capabilities?.sourceInspection
+                              ? pageSet("Overview")
+                              : modalSet("record")
+                          }
                         >
-                          Start a recording →
+                          <Plus size={16} /> New recording
                         </button>
                       }
                     />
-                  )}
-                </>
-              )}
+                    {info && (
+                      <p className="compatibility-note">
+                        Update your companion for automatic stream titles and
+                        live previews. <a href={docsUrl}>Setup guide ↗</a>
+                      </p>
+                    )}
+                    <div className="stats">
+                      <Stat
+                        icon={<Activity />}
+                        label="ACTIVE RECORDINGS"
+                        value={status?.activeRecordings ?? "—"}
+                        note="Currently capturing"
+                      />
+                      <Stat
+                        icon={<Archive />}
+                        label="TOTAL RECORDINGS"
+                        value={status?.totalRecordings ?? "—"}
+                        note="In your library"
+                      />
+                      <Stat
+                        icon={<Radio />}
+                        label="CHANNELS"
+                        value={status?.totalChannels ?? "—"}
+                        note="Saved to your studio"
+                      />
+                      <Stat
+                        icon={<HardDrive />}
+                        label="DISK AVAILABLE"
+                        value={
+                          status?.disk ? bytes(status.disk.available) : "—"
+                        }
+                        note={
+                          status?.disk
+                            ? `${status.disk.usedPercent.toFixed(0)}% used`
+                            : "On this device"
+                        }
+                      />
+                    </div>
+                    <div className="sectionhead">
+                      <div>
+                        <div className="eyebrow">RECENT ACTIVITY</div>
+                        <h2>Your recordings</h2>
+                      </div>
+                      <button
+                        className="link"
+                        onClick={() => pageSet("Library")}
+                      >
+                        View library →
+                      </button>
+                    </div>
+                    {recordings.length ? (
+                      <div className="record-list">
+                        {recordings.slice(0, 5).map((r) => (
+                          <RecordRow
+                            key={r.id}
+                            r={r}
+                            open={() => {
+                              playerIdSet(r.id);
+                              modalSet("player");
+                            }}
+                            stop={() =>
+                              action(() => send(`/recordings/${r.id}/stop`, {}))
+                            }
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      <Empty
+                        icon={<Clapperboard />}
+                        title="Your first recording starts here"
+                        text="Start a recording from a stream URL, or add a channel to capture it automatically."
+                        button={
+                          <button
+                            className="secondary"
+                            onClick={() =>
+                              info?.capabilities?.sourceInspection
+                                ? pageSet("Overview")
+                                : modalSet("record")
+                            }
+                          >
+                            Start a recording →
+                          </button>
+                        }
+                      />
+                    )}
+                  </>
+                )}
               {page === "Channels" && (
                 <>
                   <PageTitle
@@ -692,7 +642,11 @@ function App() {
                     action={
                       <button
                         className="primary"
-                        onClick={() => modalSet("record")}
+                        onClick={() =>
+                          info?.capabilities?.sourceInspection
+                            ? pageSet("Overview")
+                            : modalSet("record")
+                        }
                       >
                         <Plus size={16} /> New recording
                       </button>
@@ -953,6 +907,7 @@ function App() {
             }}
           >
             <Player
+              livePreview={!!info?.capabilities?.livePreview}
               recording={recordings.find((r) => r.id === playerId)!}
               action={action}
               close={() => modalSet("")}

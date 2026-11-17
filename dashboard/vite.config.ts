@@ -9,5 +9,9 @@ export default defineConfig({
   },
   base: "./",
   plugins: [react()],
-  build: { outDir: resolve("dist-dashboard"), emptyOutDir: true },
+  build: {
+    license: { fileName: "licenses/dependencies.md" },
+    outDir: resolve("dist-dashboard"),
+    emptyOutDir: true,
+  },
 });

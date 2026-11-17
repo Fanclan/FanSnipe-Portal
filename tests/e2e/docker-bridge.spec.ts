@@ -251,14 +251,13 @@ test("hung companion discovery becomes retryable and explains Docker fallback", 
     await route.abort().catch(() => {});
   });
   await page.goto("/app/");
-  await expect(
-    page.getByRole("heading", {
-      name: "Companion offline or local network access blocked",
-    }),
-  ).toBeVisible({ timeout: 13000 });
-  await expect(
-    page.getByRole("link", { name: /local Docker dashboard/i }),
-  ).toHaveAttribute("href", "http://127.0.0.1:47821/app/");
-  await expect(page.getByText(/FANSNIPE_HOSTED_DASHBOARD=true/)).toBeVisible();
+  const launcher = page.getByRole("link", { name: "Open local studio" });
+  await expect(launcher).toHaveAttribute("href", "http://127.0.0.1:47821/app/");
+  await expect(launcher).not.toHaveAttribute("target", "_blank");
+  await page.getByRole("button", { name: "Check again" }).click();
+  await expect(page.getByRole("status")).toContainText("Start the companion", {
+    timeout: 13000,
+  });
+  await expect(launcher).toBeVisible();
   await expect(page.getByRole("button", { name: "Check again" })).toBeEnabled();
 });

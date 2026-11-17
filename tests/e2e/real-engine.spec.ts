@@ -136,7 +136,7 @@ test("bundled dashboard pairs with real engine, plays local ranges and revokes",
     await expect.poll(() => engine.auth.listPending().length).toBe(1);
     expect(engine.auth.approve(engine.auth.listPending()[0].id)).toBe(true);
     await expect(
-      page.getByRole("heading", { name: "Good to see you." }),
+      page.getByRole("heading", { name: /Good to see you|Recording studio/ }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Library", exact: true }).click();
     await page.getByRole("button", { name: /Real local fixture/ }).click();
@@ -211,14 +211,14 @@ test("bundled dashboard pairs with real engine, plays local ranges and revokes",
     const other = await page.context().newPage();
     await other.goto(origin + "/app/");
     await expect(
-      other.getByRole("heading", { name: "Good to see you." }),
+      other.getByRole("heading", { name: /Good to see you|Recording studio/ }),
     ).toBeVisible();
     await page.getByRole("button", { name: "Disconnect this browser" }).click();
     await expect(
-      page.getByRole("heading", { name: /connect your studio/ }),
+      page.getByRole("heading", { name: /Connect your studio|Set a studio password/i }),
     ).toBeVisible();
     await expect(
-      other.getByRole("heading", { name: /connect your studio/ }),
+      other.getByRole("heading", { name: /Connect your studio|Set a studio password/i }),
     ).toBeVisible();
     expect(
       await other.evaluate(() => localStorage.getItem("streamsnipe.token.v1")),
@@ -229,7 +229,7 @@ test("bundled dashboard pairs with real engine, plays local ranges and revokes",
     await expect.poll(() => engine.auth.listPending().length).toBe(1);
     expect(engine.auth.approve(engine.auth.listPending()[0].id)).toBe(true);
     await expect(
-      page.getByRole("heading", { name: "Good to see you." }),
+      page.getByRole("heading", { name: /Good to see you|Recording studio/ }),
     ).toBeVisible();
     // A second browser session is paired through the same local approval API and revokes the first.
     const post = (url: string, body: any, token?: string) =>
@@ -268,7 +268,7 @@ test("bundled dashboard pairs with real engine, plays local ranges and revokes",
       ).status,
     ).toBe(200);
     await expect(
-      page.getByRole("heading", { name: /connect your studio/ }),
+      page.getByRole("heading", { name: /Connect your studio|Set a studio password/i }),
     ).toBeVisible({ timeout: 20000 });
     expect(
       await page.evaluate(() => localStorage.getItem("streamsnipe.token.v1")),
