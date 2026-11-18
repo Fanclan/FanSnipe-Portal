@@ -11,7 +11,11 @@ concurrency:
 jobs:
   portal:
     name: Portal quality and browser tests
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    container:
+      # Match the browser bundled with the Playwright version in package-lock.json.
+      image: mcr.microsoft.com/playwright:v1.65.1-noble@sha256:766137e2d9caad4744187e53cdc89320ba6f2eb57cff097374020944b44dd0a9
+      options: --init --shm-size=512m
     timeout-minutes: 20
     env:
       ASTRO_TELEMETRY_DISABLED: '1'
@@ -23,7 +27,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Fanclan/FanSnipe-Companion
-          ref: 74c4ba056fb4ad4383388db2565d54aa86d60994
+          ref: 3c832886eae75c0a3790dcf2743749e9e38d486e
           path: .integration/companion
           persist-credentials: false
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -31,15 +35,19 @@ jobs:
           node-version: '24'
           cache: npm
       - run: npm ci
-      - run: sudo apt-get update && sudo apt-get install -y ffmpeg
+      - name: Install FFmpeg for media integration
+        run: |
+          curl -fLSs --retry 3 --max-time 120 https://github.com/jellyfin/jellyfin-ffmpeg/releases/download/v8.1.3-2/jellyfin-ffmpeg_8.1.3-2_portable_linux64-gpl.tar.xz -o "$RUNNER_TEMP/media.tar.xz"
+          printf '%s  %s\n' 1df84d04c4322902dba81c290508cdf3d89524d210b9fe03154bea6c4e3bfbb6 "$RUNNER_TEMP/media.tar.xz" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/fansnipe-media"
+          python3 -m tarfile --filter data -e "$RUNNER_TEMP/media.tar.xz" "$RUNNER_TEMP/fansnipe-media"
+          echo "$RUNNER_TEMP/fansnipe-media" >> "$GITHUB_PATH"
       - run: npm ci && npm run build
         working-directory: .integration/companion
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
       - run: npm run build
-      - run: npx playwright install --with-deps chromium
-      - run: npm run test:e2e
+      - run: FANSNIPE_ENGINE_DIST="$GITHUB_WORKSPACE/.integration/companion/dist/app.js" npm run test:e2e
         env:
           FANSNIPE_REQUIRE_STUDIO_JOURNEY: '1'
-          FANSNIPE_ENGINE_DIST: ${{ github.workspace }}/.integration/companion/dist/app.js

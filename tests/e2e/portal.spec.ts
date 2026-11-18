@@ -296,3 +296,42 @@ test("Docker setup guide explains both password mounts and the recording journey
     page.getByRole("link", { name: "Open local studio", exact: true }).first(),
   ).toHaveAttribute("href", "http://127.0.0.1:47821/app/");
 });
+
+test("local studio beta lists the verified native installers and matching Docker release", async ({
+  page,
+}) => {
+  await page.goto("/downloads/");
+  const release = page.locator("section").filter({
+    has: page.getByRole("heading", { name: /Version 0\.1\.4-beta\.1/ }),
+  });
+  await expect(release.getByText("This release is unsigned.")).toBeVisible();
+  await expect(
+    release.getByText("The eight-hour Windows test has been deferred."),
+  ).toBeVisible();
+  const prefix =
+    "https://github.com/Fanclan/FanSnipe-Companion/releases/download/";
+  for (const [name, suffix] of [
+    [
+      "macOS 13+ · Apple Silicon (DMG)",
+      "desktop-v0.1.4-beta.1/FanSnipe-0.1.4-arm64.dmg",
+    ],
+    ["macOS 13+ · Intel (DMG)", "desktop-v0.1.4-beta.1/FanSnipe-0.1.4.dmg"],
+    ["Windows x64 (EXE)", "desktop-v0.1.4-beta.1/FanSnipe.Setup.0.1.4.exe"],
+    [
+      "Docker release verification manifest (JSON)",
+      "docker-v0.1.4-beta.1/release-manifest.json",
+    ],
+  ]) {
+    await expect(
+      release.getByRole("link", { name: name + " ↗", exact: true }),
+    ).toHaveAttribute("href", prefix + suffix);
+  }
+  await expect(
+    release.getByText("OCI image index digest:", { exact: false }),
+  ).toContainText(
+    "sha256:c6b9558701654183c04e73e60380b9841d0edd82721440913b9d807a31013752",
+  );
+  await expect(
+    release.getByText("Unlock it with the password", { exact: false }),
+  ).toBeVisible();
+});
